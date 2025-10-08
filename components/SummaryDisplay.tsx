@@ -56,7 +56,32 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto relative">
+      {/* Navigation Buttons - Mobile Only */}
+      {hasPrevious && onPreviousChapter && (
+        <button
+          onClick={onPreviousChapter}
+          className="md:hidden fixed bottom-6 left-4 z-40 w-12 h-12 bg-gray-800/90 hover:bg-gray-700 text-amber-400 rounded-full shadow-lg flex items-center justify-center transition-all"
+          aria-label="Previous Chapter"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      )}
+
+      {hasNext && onNextChapter && (
+        <button
+          onClick={onNextChapter}
+          className="md:hidden fixed bottom-6 right-4 z-40 w-12 h-12 bg-gray-800/90 hover:bg-gray-700 text-amber-400 rounded-full shadow-lg flex items-center justify-center transition-all"
+          aria-label="Next Chapter"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      )}
+
       <h2 className="text-2xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400 tracking-tight mb-4 pb-4 border-b-2 border-amber-900/30">
         {chapter.title}
       </h2>
@@ -139,7 +164,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
 
       {/* Full Screen Reader Modal */}
       {isFullScreen && (
-        <div className="fixed inset-0 z-50 overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-50 bg-gray-900 overflow-hidden flex flex-col">
           {/* Floating Settings Button */}
           <button
             onClick={() => setShowControls(!showControls)}
@@ -258,31 +283,6 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
                 </div>
               </div>
             </>
-          )}
-
-          {/* Navigation Buttons - Mobile Only */}
-          {hasPrevious && onPreviousChapter && (
-            <button
-              onClick={onPreviousChapter}
-              className="md:hidden fixed bottom-20 left-4 z-50 w-12 h-12 bg-gray-800/90 hover:bg-gray-700 text-amber-400 rounded-full shadow-lg flex items-center justify-center transition-all"
-              aria-label="Previous Chapter"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-          )}
-
-          {hasNext && onNextChapter && (
-            <button
-              onClick={onNextChapter}
-              className="md:hidden fixed bottom-20 right-4 z-50 w-12 h-12 bg-gray-800/90 hover:bg-gray-700 text-amber-400 rounded-full shadow-lg flex items-center justify-center transition-all"
-              aria-label="Next Chapter"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
           )}
 
           {/* Reader Content */}
