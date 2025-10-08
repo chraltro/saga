@@ -1,0 +1,5 @@
+{
+  "name": "Chapter Summary Generator",
+  "description": "An intelligent application that parses uploaded book files (.txt), identifies chapters, and uses the Gemini API to generate a three-bullet summary and an encapsulating quote for each chapter.",
+  "requestFramePermissions": []
+}
