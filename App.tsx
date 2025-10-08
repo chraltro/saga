@@ -10,6 +10,7 @@ import FileUploadScreen from './components/FileUploadScreen';
 import ChapterMenu from './components/ChapterMenu';
 import SummaryDisplay from './components/SummaryDisplay';
 import { BookOpenIcon, ArrowLeftIcon, SagaLogo, SpinnerIcon, MenuIcon, XIcon } from './components/Icons';
+import logoImg from './public/logo.png';
 
 function App(): React.ReactElement {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -379,7 +380,7 @@ function App(): React.ReactElement {
         {/* Desktop header */}
         <div className="hidden md:flex items-start justify-between gap-3 mb-4 p-2">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <img src="/logo.png" alt="SAGA Logo" className="w-10 h-10 flex-shrink-0" />
+              <img src={logoImg} alt="SAGA Logo" className="w-10 h-10 flex-shrink-0" />
               <h1 className="text-xl font-bold tracking-tight text-amber-400/90 break-words" title={currentBook.title}>{currentBook.title}</h1>
             </div>
             <button onClick={handleBackToLibrary} className="p-1 flex-shrink-0 text-gray-400 hover:text-amber-400 transition-colors" aria-label="Back to library">
@@ -390,7 +391,7 @@ function App(): React.ReactElement {
         {/* Mobile header inside sidebar */}
         <div className="md:hidden flex items-center justify-between mb-4 p-2">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="SAGA Logo" className="w-10 h-10" />
+            <img src={logoImg} alt="SAGA Logo" className="w-10 h-10" />
             <h2 className="text-lg font-bold text-amber-400/90">Chapters</h2>
           </div>
           <button

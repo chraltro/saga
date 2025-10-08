@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SagaLogo } from './Icons';
 import { validateGitHubPAT, validateGeminiApiKey } from '../services/auth';
 import { testGitHubPAT } from '../services/gist';
+import logoImg from '../public/logo.png';
 
 interface LoginScreenProps {
   onLogin: (githubPAT: string, geminiApiKey: string) => void;
@@ -93,7 +94,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, error }) => {
       <div className="max-w-md w-full p-8 space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-6">
-            <img src="/logo.png" alt="SAGA Logo" className="w-24 h-24" />
+            <img src={logoImg} alt="SAGA Logo" className="w-24 h-24" />
           </div>
           <h1 className="text-5xl font-extrabold mb-3 tracking-wide">
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500">SAGA</span>
