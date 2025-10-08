@@ -7,17 +7,26 @@ interface SummaryDisplayProps {
   chapter: Chapter | undefined;
   summary: Summary | undefined;
   isProcessing: boolean;
+  onPreviousChapter?: () => void;
+  onNextChapter?: () => void;
+  hasPrevious?: boolean;
+  hasNext?: boolean;
 }
 
 const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
   chapter,
   summary,
-  isProcessing
+  isProcessing,
+  onPreviousChapter,
+  onNextChapter,
+  hasPrevious,
+  hasNext
 }) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [fontFamily, setFontFamily] = useState<'serif' | 'sans' | 'mono'>('serif');
+  const [showControls, setShowControls] = useState(false);
 
   if (!chapter) {
     return (
@@ -130,84 +139,151 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
 
       {/* Full Screen Reader Modal */}
       {isFullScreen && (
-        <div className="fixed inset-0 z-50 bg-gray-900 overflow-hidden flex flex-col">
-          {/* Controls Bar */}
-          <div className="bg-gray-800 border-b border-gray-700 p-4 flex items-center justify-between flex-wrap gap-4">
-            <h3 className="text-lg font-bold text-amber-400 flex-1">{chapter.title}</h3>
+        <div className="fixed inset-0 z-50 overflow-hidden flex flex-col">
+          {/* Floating Settings Button */}
+          <button
+            onClick={() => setShowControls(!showControls)}
+            className="fixed top-4 right-4 z-50 w-10 h-10 md:w-12 md:h-12 bg-gray-800/90 hover:bg-gray-700 text-amber-400 rounded-full shadow-lg flex items-center justify-center transition-all"
+            aria-label="Settings"
+          >
+            <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
 
-            <div className="flex items-center gap-4 flex-wrap">
-              {/* Font Size */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Size:</span>
-                <button
-                  onClick={() => setFontSize('small')}
-                  className={`px-2 py-1 text-xs rounded ${fontSize === 'small' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                  A
-                </button>
-                <button
-                  onClick={() => setFontSize('medium')}
-                  className={`px-2 py-1 text-sm rounded ${fontSize === 'medium' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                  A
-                </button>
-                <button
-                  onClick={() => setFontSize('large')}
-                  className={`px-2 py-1 text-base rounded ${fontSize === 'large' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                  A
-                </button>
+          {/* Close Button */}
+          <button
+            onClick={() => setIsFullScreen(false)}
+            className="fixed top-4 left-4 z-50 w-10 h-10 md:w-12 md:h-12 bg-gray-800/90 hover:bg-red-600/90 text-gray-400 hover:text-white rounded-full shadow-lg flex items-center justify-center transition-all"
+            aria-label="Close"
+          >
+            <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* Settings Panel - Slides in from right */}
+          {showControls && (
+            <>
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 bg-black/50 z-40"
+                onClick={() => setShowControls(false)}
+              />
+
+              {/* Settings Panel */}
+              <div className="fixed top-0 right-0 h-full w-72 md:w-80 bg-gray-800 shadow-2xl z-50 p-6 overflow-y-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-amber-400">Reading Settings</h3>
+                  <button
+                    onClick={() => setShowControls(false)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Font Size */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-3">Font Size</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setFontSize('small')}
+                        className={`flex-1 px-3 py-2 text-xs rounded ${fontSize === 'small' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                      >
+                        A
+                      </button>
+                      <button
+                        onClick={() => setFontSize('medium')}
+                        className={`flex-1 px-3 py-2 text-sm rounded ${fontSize === 'medium' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                      >
+                        A
+                      </button>
+                      <button
+                        onClick={() => setFontSize('large')}
+                        className={`flex-1 px-3 py-2 text-base rounded ${fontSize === 'large' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                      >
+                        A
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Theme */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-3">Theme</label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setTheme('dark')}
+                        className={`flex-1 px-4 py-2 text-sm rounded ${theme === 'dark' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                      >
+                        Night
+                      </button>
+                      <button
+                        onClick={() => setTheme('light')}
+                        className={`flex-1 px-4 py-2 text-sm rounded ${theme === 'light' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                      >
+                        Day
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Font Family */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-3">Font Family</label>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setFontFamily('serif')}
+                        className={`w-full px-4 py-2 text-sm rounded font-serif text-left ${fontFamily === 'serif' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                      >
+                        Serif
+                      </button>
+                      <button
+                        onClick={() => setFontFamily('sans')}
+                        className={`w-full px-4 py-2 text-sm rounded font-sans text-left ${fontFamily === 'sans' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                      >
+                        Sans Serif
+                      </button>
+                      <button
+                        onClick={() => setFontFamily('mono')}
+                        className={`w-full px-4 py-2 text-sm rounded font-mono text-left ${fontFamily === 'mono' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                      >
+                        Monospace
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
+            </>
+          )}
 
-              {/* Theme */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Theme:</span>
-                <button
-                  onClick={() => setTheme('dark')}
-                  className={`px-3 py-1 text-xs rounded ${theme === 'dark' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                  Night
-                </button>
-                <button
-                  onClick={() => setTheme('light')}
-                  className={`px-3 py-1 text-xs rounded ${theme === 'light' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                  Day
-                </button>
-              </div>
+          {/* Navigation Buttons - Mobile Only */}
+          {hasPrevious && onPreviousChapter && (
+            <button
+              onClick={onPreviousChapter}
+              className="md:hidden fixed bottom-20 left-4 z-50 w-12 h-12 bg-gray-800/90 hover:bg-gray-700 text-amber-400 rounded-full shadow-lg flex items-center justify-center transition-all"
+              aria-label="Previous Chapter"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
 
-              {/* Font Family */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Font:</span>
-                <button
-                  onClick={() => setFontFamily('serif')}
-                  className={`px-3 py-1 text-xs rounded font-serif ${fontFamily === 'serif' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                  Serif
-                </button>
-                <button
-                  onClick={() => setFontFamily('sans')}
-                  className={`px-3 py-1 text-xs rounded font-sans ${fontFamily === 'sans' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                  Sans
-                </button>
-                <button
-                  onClick={() => setFontFamily('mono')}
-                  className={`px-3 py-1 text-xs rounded font-mono ${fontFamily === 'mono' ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
-                >
-                  Mono
-                </button>
-              </div>
-
-              {/* Close Button */}
-              <button
-                onClick={() => setIsFullScreen(false)}
-                className="px-4 py-1 text-sm bg-red-600/20 text-red-400 hover:bg-red-600/30 rounded transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
+          {hasNext && onNextChapter && (
+            <button
+              onClick={onNextChapter}
+              className="md:hidden fixed bottom-20 right-4 z-50 w-12 h-12 bg-gray-800/90 hover:bg-gray-700 text-amber-400 rounded-full shadow-lg flex items-center justify-center transition-all"
+              aria-label="Next Chapter"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
 
           {/* Reader Content */}
           <div className="flex-1 overflow-y-auto">

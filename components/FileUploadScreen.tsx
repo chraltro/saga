@@ -75,7 +75,7 @@ const FileUploadScreen: React.FC<FileUploadScreenProps> = ({
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-900">
       {onLogout && (
-        <div className="absolute top-4 right-4 flex gap-2">
+        <div className="hidden md:flex absolute top-4 right-4 gap-2">
           <button
             onClick={copyQuickLoginCode}
             className="text-xs px-3 py-1 bg-amber-600/20 text-amber-400 hover:bg-amber-600/30 rounded transition-colors"
