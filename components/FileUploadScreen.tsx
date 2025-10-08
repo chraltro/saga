@@ -3,6 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { UploadCloudIcon, LibraryIcon, TrashIcon, SagaLogo } from './Icons';
 import { BookRecord } from '../types';
 import { loadCredentials } from '../services/auth';
+import logoImg from '../public/logo.png';
 
 interface FileUploadScreenProps {
   onFileUpload: (file: File) => void;
@@ -93,7 +94,7 @@ const FileUploadScreen: React.FC<FileUploadScreenProps> = ({
       <div className="max-w-4xl w-full p-8 space-y-12">
         <div className="text-center">
             <div className="flex justify-center mb-6">
-                <img src="/logo.png" alt="SAGA Logo" className="w-24 h-24" />
+                <img src={logoImg} alt="SAGA Logo" className="w-24 h-24" />
             </div>
             <h1 className="text-5xl font-extrabold text-white sm:text-6xl md:text-7xl mb-3 tracking-wide">
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500">SAGA</span>
