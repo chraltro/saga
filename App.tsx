@@ -443,6 +443,18 @@ function App(): React.ReactElement {
             chapter={selectedChapter}
             summary={summaryToDisplay}
             isProcessing={isChapterProcessing}
+            onPreviousChapter={() => {
+              if (selectedChapterIndex > 0) {
+                handleSelectAndSummarizeChapter(selectedChapterIndex - 1);
+              }
+            }}
+            onNextChapter={() => {
+              if (currentBook && selectedChapterIndex < currentBook.chapters.length - 1) {
+                handleSelectAndSummarizeChapter(selectedChapterIndex + 1);
+              }
+            }}
+            hasPrevious={selectedChapterIndex > 0}
+            hasNext={currentBook ? selectedChapterIndex < currentBook.chapters.length - 1 : false}
         />
       </main>
     </div>
