@@ -17,3 +17,55 @@ svg.animate-spin {
   animation: spin 1s linear infinite !important;
   transform-origin: center;
 }
+
+/* Custom scrollbar styling for sidebar */
+nav::-webkit-scrollbar {
+  width: 8px;
+}
+
+nav::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.5); /* gray-800/50 */
+  border-radius: 4px;
+}
+
+nav::-webkit-scrollbar-thumb {
+  background: rgba(217, 119, 6, 0.5); /* amber-600/50 */
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 119, 6, 0.7); /* amber-600/70 */
+}
+
+/* Firefox scrollbar styling */
+nav {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(217, 119, 6, 0.5) rgba(31, 41, 55, 0.5);
+}
+
+/* Custom scrollbar styling for chapter tooltip */
+.chapter-tooltip::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chapter-tooltip::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.5); /* gray-800/50 */
+  border-radius: 4px;
+}
+
+.chapter-tooltip::-webkit-scrollbar-thumb {
+  background: rgba(217, 119, 6, 0.5); /* amber-600/50 */
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.chapter-tooltip::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 119, 6, 0.7); /* amber-600/70 */
+}
+
+/* Firefox scrollbar styling for tooltip */
+.chapter-tooltip {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(217, 119, 6, 0.5) rgba(31, 41, 55, 0.5);
+}
