@@ -222,13 +222,7 @@ function App(): React.ReactElement {
         lines.forEach(line => {
           if (line.startsWith('BULLET: ')) currentSummary.bullets.push(line.substring(8).trim());
           else if (line.startsWith('QUOTE: ')) {
-            let quote = line.substring(7).trim();
-            // Remove surrounding quotes if present (handles ", "", ', etc.)
-            while ((quote.startsWith('"') && quote.endsWith('"')) ||
-                   (quote.startsWith("'") && quote.endsWith("'"))) {
-              quote = quote.substring(1, quote.length - 1).trim();
-            }
-            currentSummary.quote = quote;
+            currentSummary.quote = line.substring(7).trim();
           }
         });
         

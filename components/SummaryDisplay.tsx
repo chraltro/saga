@@ -130,7 +130,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
               </div>
               <blockquote className="relative p-4 md:p-6 bg-gradient-to-r from-amber-900/20 to-orange-900/20 border-l-4 border-amber-500 rounded-r-lg">
                 <p className="text-base md:text-xl italic text-amber-50 leading-relaxed">
-                  "{summary.quote}"
+                  {summary.quote}
                 </p>
               </blockquote>
             </div>
@@ -156,7 +156,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
           </div>
         </div>
         <div
-          className={`${themeClasses[theme]} ${fontSizeClasses[fontSize]} ${fontFamilyClasses[fontFamily]} p-4 md:p-6 rounded-lg leading-relaxed whitespace-pre-wrap max-h-[60vh] overflow-y-auto`}
+          className={`${themeClasses[theme]} ${fontSizeClasses[fontSize]} ${fontFamilyClasses[fontFamily]} p-4 md:p-6 rounded-lg leading-relaxed whitespace-pre-wrap max-h-[60vh] overflow-y-auto custom-scrollbar`}
         >
           {chapter.content}
         </div>
@@ -286,7 +286,7 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
           )}
 
           {/* Reader Content */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             <div className={`${themeClasses[theme]} min-h-full`}>
               <div className={`max-w-4xl mx-auto p-6 md:p-12 ${fontSizeClasses[fontSize]} ${fontFamilyClasses[fontFamily]} leading-relaxed whitespace-pre-wrap`}>
                 {chapter.content}
@@ -303,6 +303,32 @@ const SummaryDisplay: React.FC<SummaryDisplayProps> = ({
           }
           .animate-fade-in {
             animation: fade-in 0.5s ease-out forwards;
+          }
+
+          /* Custom Scrollbar Styles - Same as sidebar */
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+          }
+
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(31, 41, 55, 0.5);
+            border-radius: 4px;
+          }
+
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(217, 119, 6, 0.5);
+            border-radius: 4px;
+            transition: background 0.2s;
+          }
+
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(217, 119, 6, 0.7);
+          }
+
+          /* Firefox */
+          .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(217, 119, 6, 0.5) rgba(31, 41, 55, 0.5);
           }
         `}</style>
     </div>
