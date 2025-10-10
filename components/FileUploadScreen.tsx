@@ -3,7 +3,7 @@ import React, { useCallback, useState } from 'react';
 import { UploadCloudIcon, LibraryIcon, TrashIcon, SagaLogo } from './Icons';
 import { BookRecord } from '../types';
 import { loadCredentials } from '../services/auth';
-import logoImg from '../public/logo.png';
+import logoImg from '/logo.png';
 
 interface FileUploadScreenProps {
   onFileUpload: (file: File) => void;

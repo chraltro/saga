@@ -10,7 +10,7 @@ import FileUploadScreen from './components/FileUploadScreen';
 import ChapterMenu from './components/ChapterMenu';
 import SummaryDisplay from './components/SummaryDisplay';
 import { BookOpenIcon, ArrowLeftIcon, SagaLogo, SpinnerIcon, MenuIcon, XIcon } from './components/Icons';
-import logoImg from './public/logo.png';
+import logoImg from '/logo.png';
 
 function App(): React.ReactElement {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SagaLogo } from './Icons';
 import { validateGitHubPAT, validateGeminiApiKey } from '../services/auth';
 import { testGitHubPAT } from '../services/gist';
-import logoImg from '../public/logo.png';
+import logoImg from '/logo.png';
 
 interface LoginScreenProps {
   onLogin: (githubPAT: string, geminiApiKey: string) => void;
