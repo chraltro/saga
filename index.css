@@ -41,7 +41,7 @@ nav::-webkit-scrollbar-thumb:hover {
 /* Firefox scrollbar styling */
 nav {
   scrollbar-width: thin;
-  scrollbar-color: rgba(217, 119, 6, 0.5) rgba(31, 41, 55, 0.5);
+  scrollbar-color: #d97706 #1f2937;
 }
 
 /* Custom scrollbar styling for chapter tooltip */
