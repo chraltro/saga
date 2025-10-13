@@ -23,7 +23,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [contextType, setContextType] = useState<ContextType>('summaries-up-to-current');
+  const [contextType, setContextType] = useState<ContextType>('current-chapter');
   const [error, setError] = useState<string | null>(null);
   const [streamingText, setStreamingText] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -107,6 +107,8 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
     if (!inputValue.trim() || isProcessing) return;
 
     const userMessage: ChatMessage = { role: 'user', content: inputValue.trim() };
+    const isFirstMessage = messages.length === 0;
+
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsProcessing(true);
@@ -115,7 +117,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
 
     try {
       const context = buildContext();
-      const stream = await chatWithGeminiStream([...messages, userMessage], context);
+      const stream = await chatWithGeminiStream([...messages, userMessage], context, isFirstMessage);
 
       let fullResponse = '';
       for await (const chunk of stream) {
