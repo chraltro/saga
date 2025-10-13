@@ -69,3 +69,29 @@ nav {
   scrollbar-width: thin;
   scrollbar-color: rgba(217, 119, 6, 0.5) rgba(31, 41, 55, 0.5);
 }
+
+/* Custom scrollbar styling for chatbot messages */
+.chatbot-messages::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chatbot-messages::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.5); /* gray-800/50 */
+  border-radius: 4px;
+}
+
+.chatbot-messages::-webkit-scrollbar-thumb {
+  background: rgba(217, 119, 6, 0.5); /* amber-600/50 */
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.chatbot-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 119, 6, 0.7); /* amber-600/70 */
+}
+
+/* Firefox scrollbar styling for chatbot */
+.chatbot-messages {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(217, 119, 6, 0.5) rgba(31, 41, 55, 0.5);
+}

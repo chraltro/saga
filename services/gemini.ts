@@ -78,7 +78,7 @@ export async function generateChapterImage(summary: Summary): Promise<string> {
         if (response.generatedImages?.[0]?.image?.imageBytes) {
             return response.generatedImages[0].image.imageBytes;
         }
-        
+
         let feedbackMessage = "No specific reason provided by the API.";
 
         if (response.promptFeedback) {
@@ -101,4 +101,46 @@ export async function generateChapterImage(summary: Summary): Promise<string> {
         const message = error instanceof Error ? error.message : "An unknown API error occurred.";
         throw new Error(`Could not generate image: ${message}`);
     }
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+/**
+ * Chat with Gemini 2.5 Flash using chapter context
+ * @param messages The conversation history
+ * @param systemContext The context to provide to the AI (chapter content or summaries)
+ * @returns An async iterable stream of the generated content.
+ */
+export async function chatWithGeminiStream(messages: ChatMessage[], systemContext: string) {
+  const ai = getAIInstance();
+
+  // Build the conversation history with system context
+  const contents: string[] = [];
+
+  // Add system context as the first message
+  if (systemContext) {
+    contents.push(`Context from the book:\n---\n${systemContext}\n---\n\nYou are a helpful assistant discussing this book with the reader. Use the context above to answer questions about the story, characters, themes, and events. Be conversational and engaging.`);
+  }
+
+  // Add conversation history
+  messages.forEach(msg => {
+    contents.push(`${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`);
+  });
+
+  const fullPrompt = contents.join('\n\n');
+
+  try {
+    const response = await ai.models.generateContentStream({
+      model: 'gemini-2.5-flash',
+      contents: fullPrompt,
+    });
+    return response;
+  } catch (error) {
+    console.error("Error in chat:", error);
+    const message = error instanceof Error ? error.message : "An unknown error occurred.";
+    throw new Error(`Could not get a response from the AI model. ${message}`);
+  }
 }

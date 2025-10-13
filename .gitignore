@@ -24,3 +24,7 @@ npm-debug.log*
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+
+# GitHub Pages deployment files (generated)
+/index.html
+/assets/
