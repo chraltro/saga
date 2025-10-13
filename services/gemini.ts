@@ -113,9 +113,17 @@ export interface ChatMessage {
  * @param messages The conversation history
  * @param systemContext The context to provide to the AI (chapter content or summaries)
  * @param isFirstMessage Whether this is the first message in the conversation
+ * @param allowSpoilers Whether to allow information beyond current chapter
+ * @param currentChapter The current chapter number (1-indexed)
  * @returns An async iterable stream of the generated content.
  */
-export async function chatWithGeminiStream(messages: ChatMessage[], systemContext: string, isFirstMessage: boolean = false) {
+export async function chatWithGeminiStream(
+  messages: ChatMessage[],
+  systemContext: string,
+  isFirstMessage: boolean = false,
+  allowSpoilers: boolean = false,
+  currentChapter: number = 1
+) {
   const ai = getAIInstance();
 
   // Build the conversation history with system context
@@ -123,6 +131,10 @@ export async function chatWithGeminiStream(messages: ChatMessage[], systemContex
 
   // Only send full context on first message to save tokens
   if (isFirstMessage && systemContext) {
+    const spoilerWarning = allowSpoilers
+      ? ''
+      : `\n\n🚫 CRITICAL SPOILER PROTECTION:\n- The reader is currently on Chapter ${currentChapter}\n- NEVER reveal events, plot points, or character fates from chapters AFTER Chapter ${currentChapter}\n- If asked about future events, politely say you can only discuss up to their current chapter\n- DO NOT hint at or foreshadow future events\n- Stay strictly within the boundaries of what they've read so far`;
+
     contents.push(`Context from the book:\n---\n${systemContext}\n---\n\nYou are a friendly, conversational assistant helping readers discuss this book.
 
 Key instructions:
@@ -132,12 +144,16 @@ Key instructions:
 - Only elaborate if specifically asked for details
 - Use markdown formatting (bold, italics, lists) when helpful
 - Focus on what the reader asked, don't over-explain
-- Remember the context above for the rest of our conversation
+- Remember the context above for the rest of our conversation${spoilerWarning}
 
 Answer naturally as if chatting with a friend about a book you both read.`);
   } else if (!isFirstMessage) {
+    const spoilerReminder = allowSpoilers
+      ? ''
+      : ` Remember: NO SPOILERS beyond Chapter ${currentChapter}!`;
+
     // Just a reminder for subsequent messages
-    contents.push(`You are discussing a book with the reader. Keep responses brief and conversational (2-4 sentences for simple questions).`);
+    contents.push(`You are discussing a book with the reader. Keep responses brief and conversational (2-4 sentences for simple questions).${spoilerReminder}`);
   }
 
   // Add conversation history (only last 4 exchanges to save tokens)

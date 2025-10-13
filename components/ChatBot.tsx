@@ -24,6 +24,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [contextType, setContextType] = useState<ContextType>('current-chapter');
+  const [allowSpoilers, setAllowSpoilers] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [streamingText, setStreamingText] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -117,7 +118,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
 
     try {
       const context = buildContext();
-      const stream = await chatWithGeminiStream([...messages, userMessage], context, isFirstMessage);
+      const stream = await chatWithGeminiStream([...messages, userMessage], context, isFirstMessage, allowSpoilers, selectedChapterIndex + 1);
 
       let fullResponse = '';
       for await (const chunk of stream) {
@@ -186,22 +187,42 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
 
       {/* Settings Panel */}
       {showSettings && (
-        <div className="p-4 border-b border-amber-900/20 bg-gray-900/30 space-y-2">
-          <label className="block text-sm font-semibold text-amber-400/90">Context:</label>
-          <select
-            value={contextType}
-            onChange={(e) => setContextType(e.target.value as ContextType)}
-            className="w-full bg-gray-700 text-gray-100 border border-amber-900/30 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
-          >
-            <option value="current-chapter">Current Chapter (Full Text)</option>
-            <option value="summaries-up-to-current">Summaries + Current Chapter</option>
-            <option value="up-to-current">All Chapters Up to Current</option>
-            <option value="all-summaries">All Chapter Summaries</option>
-            <option value="all-chapters">All Chapters (Full Text)</option>
-          </select>
-          <p className="text-xs text-gray-400">
-            Current: {getContextLabel(contextType)}
-          </p>
+        <div className="p-4 border-b border-amber-900/20 bg-gray-900/30 space-y-3">
+          <div>
+            <label className="block text-sm font-semibold text-amber-400/90 mb-2">Context:</label>
+            <select
+              value={contextType}
+              onChange={(e) => setContextType(e.target.value as ContextType)}
+              className="w-full bg-gray-700 text-gray-100 border border-amber-900/30 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="current-chapter">Current Chapter (Full Text)</option>
+              <option value="summaries-up-to-current">Summaries + Current Chapter</option>
+              <option value="up-to-current">All Chapters Up to Current</option>
+              <option value="all-summaries">All Chapter Summaries</option>
+              <option value="all-chapters">All Chapters (Full Text)</option>
+            </select>
+            <p className="text-xs text-gray-400 mt-1">
+              Current: {getContextLabel(contextType)}
+            </p>
+          </div>
+
+          <div className="pt-2 border-t border-amber-900/20">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={allowSpoilers}
+                onChange={(e) => setAllowSpoilers(e.target.checked)}
+                className="w-4 h-4 rounded border-amber-900/30 bg-gray-700 text-amber-600 focus:ring-2 focus:ring-amber-500"
+              />
+              <span className="text-sm font-semibold text-amber-400/90">Allow Spoilers</span>
+            </label>
+            <p className="text-xs text-gray-400 mt-1 ml-6">
+              {allowSpoilers
+                ? '⚠️ AI can reveal future events'
+                : '✓ AI will only discuss up to chapter ' + (selectedChapterIndex + 1)
+              }
+            </p>
+          </div>
         </div>
       )}
 
