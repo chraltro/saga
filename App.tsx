@@ -9,7 +9,8 @@ import LoginScreen from './components/LoginScreen';
 import FileUploadScreen from './components/FileUploadScreen';
 import ChapterMenu from './components/ChapterMenu';
 import SummaryDisplay from './components/SummaryDisplay';
-import { BookOpenIcon, ArrowLeftIcon, SagaLogo, SpinnerIcon, MenuIcon, XIcon } from './components/Icons';
+import ChatBot from './components/ChatBot';
+import { BookOpenIcon, ArrowLeftIcon, SagaLogo, SpinnerIcon, MenuIcon, XIcon, MessageCircleIcon } from './components/Icons';
 import logoImg from '/logo.png';
 
 function App(): React.ReactElement {
@@ -26,6 +27,7 @@ function App(): React.ReactElement {
   const [selectedChapterIndex, setSelectedChapterIndex] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [isChatBotOpen, setIsChatBotOpen] = useState<boolean>(false);
 
   // Debounce timer for saving to gist
   const saveTimerRef = React.useRef<number | null>(null);
@@ -451,6 +453,26 @@ function App(): React.ReactElement {
             hasNext={currentBook ? selectedChapterIndex < currentBook.chapters.length - 1 : false}
         />
       </main>
+
+      {/* Floating Chat Button */}
+      {!isChatBotOpen && (
+        <button
+          onClick={() => setIsChatBotOpen(true)}
+          className="fixed bottom-6 right-6 p-4 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-full shadow-2xl hover:from-amber-700 hover:to-orange-700 transition-all transform hover:scale-110 z-40"
+          aria-label="Open chat"
+        >
+          <MessageCircleIcon className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* ChatBot */}
+      {isChatBotOpen && (
+        <ChatBot
+          currentBook={currentBook}
+          selectedChapterIndex={selectedChapterIndex}
+          onClose={() => setIsChatBotOpen(false)}
+        />
+      )}
     </div>
   );
 }
