@@ -1,7 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { marked } from 'marked';
 import { Chapter, Summary, BookRecord } from '../types';
 import { chatWithGeminiStream, ChatMessage } from '../services/gemini';
 import { SendIcon, SpinnerIcon, SettingsIcon, XIcon } from './Icons';
+
+// Configure marked for inline rendering
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+});
 
 export type ContextType = 'current-chapter' | 'up-to-current' | 'all-chapters' | 'all-summaries' | 'summaries-up-to-current';
 
@@ -16,15 +23,16 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [contextType, setContextType] = useState<ContextType>('current-chapter');
+  const [contextType, setContextType] = useState<ContextType>('summaries-up-to-current');
   const [error, setError] = useState<string | null>(null);
+  const [streamingText, setStreamingText] = useState<string>('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom when messages or streaming text changes
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, streamingText]);
 
   // Build context based on selected type
   const buildContext = (): string => {
@@ -103,10 +111,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
     setInputValue('');
     setIsProcessing(true);
     setError(null);
-
-    // Prepare assistant message placeholder
-    const assistantMessage: ChatMessage = { role: 'assistant', content: '' };
-    setMessages(prev => [...prev, assistantMessage]);
+    setStreamingText('');
 
     try {
       const context = buildContext();
@@ -115,17 +120,16 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
       let fullResponse = '';
       for await (const chunk of stream) {
         fullResponse += chunk.text;
-        setMessages(prev => {
-          const newMessages = [...prev];
-          newMessages[newMessages.length - 1] = { role: 'assistant', content: fullResponse };
-          return newMessages;
-        });
+        setStreamingText(fullResponse);
       }
+
+      // Once streaming is complete, add the full message
+      setMessages(prev => [...prev, { role: 'assistant', content: fullResponse }]);
+      setStreamingText('');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An unknown error occurred.';
       setError(message);
-      // Remove the empty assistant message on error
-      setMessages(prev => prev.slice(0, -1));
+      setStreamingText('');
     } finally {
       setIsProcessing(false);
     }
@@ -220,14 +224,24 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
                   : 'bg-gray-700 text-gray-100'
               }`}
             >
-              <p className="whitespace-pre-wrap break-words text-sm">{msg.content}</p>
+              {msg.role === 'user' ? (
+                <p className="whitespace-pre-wrap break-words text-sm">{msg.content}</p>
+              ) : (
+                <div
+                  className="prose prose-sm prose-invert max-w-none break-words"
+                  dangerouslySetInnerHTML={{ __html: marked(msg.content) }}
+                />
+              )}
             </div>
           </div>
         ))}
-        {isProcessing && messages[messages.length - 1]?.content === '' && (
+        {streamingText && (
           <div className="flex justify-start">
-            <div className="bg-gray-700 text-gray-100 px-4 py-2 rounded-lg">
-              <SpinnerIcon className="w-5 h-5 text-amber-400 animate-spin" />
+            <div className="bg-gray-700 text-gray-100 px-4 py-2 rounded-lg max-w-[85%]">
+              <div
+                className="prose prose-sm prose-invert max-w-none break-words"
+                dangerouslySetInnerHTML={{ __html: marked(streamingText) }}
+              />
             </div>
           </div>
         )}
