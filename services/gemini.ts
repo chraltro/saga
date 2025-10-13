@@ -112,16 +112,17 @@ export interface ChatMessage {
  * Chat with Gemini 2.5 Flash using chapter context
  * @param messages The conversation history
  * @param systemContext The context to provide to the AI (chapter content or summaries)
+ * @param isFirstMessage Whether this is the first message in the conversation
  * @returns An async iterable stream of the generated content.
  */
-export async function chatWithGeminiStream(messages: ChatMessage[], systemContext: string) {
+export async function chatWithGeminiStream(messages: ChatMessage[], systemContext: string, isFirstMessage: boolean = false) {
   const ai = getAIInstance();
 
   // Build the conversation history with system context
   const contents: string[] = [];
 
-  // Add system context as the first message
-  if (systemContext) {
+  // Only send full context on first message to save tokens
+  if (isFirstMessage && systemContext) {
     contents.push(`Context from the book:\n---\n${systemContext}\n---\n\nYou are a friendly, conversational assistant helping readers discuss this book.
 
 Key instructions:
@@ -131,12 +132,17 @@ Key instructions:
 - Only elaborate if specifically asked for details
 - Use markdown formatting (bold, italics, lists) when helpful
 - Focus on what the reader asked, don't over-explain
+- Remember the context above for the rest of our conversation
 
 Answer naturally as if chatting with a friend about a book you both read.`);
+  } else if (!isFirstMessage) {
+    // Just a reminder for subsequent messages
+    contents.push(`You are discussing a book with the reader. Keep responses brief and conversational (2-4 sentences for simple questions).`);
   }
 
-  // Add conversation history
-  messages.forEach(msg => {
+  // Add conversation history (only last 4 exchanges to save tokens)
+  const recentMessages = messages.slice(-8); // Last 4 user + 4 assistant messages
+  recentMessages.forEach(msg => {
     contents.push(`${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`);
   });
 
@@ -150,7 +156,13 @@ Answer naturally as if chatting with a friend about a book you both read.`);
     return response;
   } catch (error) {
     console.error("Error in chat:", error);
-    const message = error instanceof Error ? error.message : "An unknown error occurred.";
+    let message = error instanceof Error ? error.message : "An unknown error occurred.";
+
+    // Provide helpful error message for quota limits
+    if (message.includes('429') || message.includes('quota') || message.includes('RESOURCE_EXHAUSTED')) {
+      throw new Error(`Rate limit reached. The Gemini API free tier has limits on how much you can use per minute. Please wait a moment and try again, or consider using shorter context options to reduce token usage.`);
+    }
+
     throw new Error(`Could not get a response from the AI model. ${message}`);
   }
 }
