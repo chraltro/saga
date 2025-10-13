@@ -35,6 +35,13 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingText]);
 
+  // Focus input after AI finishes responding
+  useEffect(() => {
+    if (!isProcessing && messages.length > 0) {
+      textareaRef.current?.focus();
+    }
+  }, [isProcessing, messages.length]);
+
   // Build context based on selected type
   const buildContext = (): string => {
     const { chapters, summaries } = currentBook;
@@ -265,6 +272,13 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
                 className="prose prose-sm prose-invert max-w-none break-words"
                 dangerouslySetInnerHTML={{ __html: marked(streamingText) }}
               />
+            </div>
+          </div>
+        )}
+        {isProcessing && !streamingText && (
+          <div className="flex justify-start">
+            <div className="bg-gray-700 text-gray-100 px-4 py-2 rounded-lg">
+              <SpinnerIcon className="w-5 h-5 text-amber-400 animate-spin" />
             </div>
           </div>
         )}
