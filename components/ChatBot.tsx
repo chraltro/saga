@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
 import { Chapter, Summary, BookRecord } from '../types';
 import { chatWithGeminiStream, ChatMessage } from '../services/gemini';
-import { SendIcon, SpinnerIcon, SettingsIcon, XIcon } from './Icons';
+import { SendIcon, SpinnerIcon, SettingsIcon, XIcon, MaximizeIcon, MinimizeIcon } from './Icons';
 
 // Configure marked for inline rendering
 marked.setOptions({
@@ -27,6 +27,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
   const [allowSpoilers, setAllowSpoilers] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [streamingText, setStreamingText] = useState<string>('');
+  const [isMaximized, setIsMaximized] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -170,7 +171,11 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
   };
 
   return (
-    <div className="fixed inset-0 md:inset-auto md:bottom-4 md:right-4 md:w-[450px] md:h-[600px] z-50 flex flex-col bg-gray-800 rounded-none md:rounded-lg shadow-2xl border border-amber-900/30">
+    <div className={`fixed z-50 flex flex-col bg-gray-800 shadow-2xl border border-amber-900/30 ${
+      isMaximized
+        ? 'inset-y-0 right-0 w-full md:w-[600px] rounded-none'
+        : 'inset-0 md:inset-auto md:bottom-4 md:right-4 md:w-[450px] md:h-[600px] rounded-none md:rounded-lg'
+    }`}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-amber-900/20 bg-gray-900/50">
         <div className="flex items-center gap-2">
@@ -183,13 +188,22 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
             <SettingsIcon className="w-5 h-5" />
           </button>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1 text-gray-400 hover:text-amber-400 transition-colors"
-          aria-label="Close chat"
-        >
-          <XIcon className="w-6 h-6" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsMaximized(!isMaximized)}
+            className="hidden md:block p-1 text-gray-400 hover:text-amber-400 transition-colors"
+            aria-label={isMaximized ? "Minimize" : "Maximize"}
+          >
+            {isMaximized ? <MinimizeIcon className="w-5 h-5" /> : <MaximizeIcon className="w-5 h-5" />}
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1 text-gray-400 hover:text-amber-400 transition-colors"
+            aria-label="Close chat"
+          >
+            <XIcon className="w-6 h-6" />
+          </button>
+        </div>
       </div>
 
       {/* Settings Panel */}

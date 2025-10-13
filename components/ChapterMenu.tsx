@@ -55,13 +55,13 @@ const ChapterMenu: React.FC<ChapterMenuProps> = ({
               )}
             </button>
 
-            {/* Hover tooltip with first summary bullet - using fixed positioning */}
+            {/* Hover tooltip with first summary bullet - desktop only */}
             {firstBullet && isHovered && buttonRefs.current[originalIndex] && (() => {
               const rect = buttonRefs.current[originalIndex]!.getBoundingClientRect();
 
               return (
                 <div
-                  className="fixed pointer-events-none z-[9999]"
+                  className="hidden md:block fixed pointer-events-none z-[9999]"
                   style={{
                     left: `${rect.right + 8}px`,
                     top: `${rect.top + rect.height / 2}px`,
