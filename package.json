@@ -10,7 +10,7 @@
     "dev": "cross-env ROLLUP_DISABLE_NATIVE=1 vite",
     "build": "cross-env ROLLUP_DISABLE_NATIVE=1 vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && node scripts/publish-to-root.js"
+    "deploy": "npm run build && node scripts/publish-to-root.js && git add -A && git commit -m \"Deploy site\" || echo Skipping commit && git push"
   },
   "dependencies": {
     "@google/genai": "^1.22.0",
