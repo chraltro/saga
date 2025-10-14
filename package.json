@@ -7,8 +7,8 @@
   "scripts": {
     "setup": "node scripts/setup-dev.js",
     "predev": "node scripts/setup-dev.js",
-    "dev": "cross-env ROLLUP_DISABLE_NATIVE=1 vite",
-    "build": "cross-env ROLLUP_DISABLE_NATIVE=1 vite build",
+    "dev": "set ROLLUP_DISABLE_NATIVE=1&& vite",
+    "build": "set ROLLUP_DISABLE_NATIVE=1&& npx vite build",
     "preview": "vite preview",
     "deploy": "npm run build && node scripts/publish-to-root.js && git add -A && git commit -m \"Deploy site\" || echo Skipping commit && git push"
   },
