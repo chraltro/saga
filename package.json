@@ -10,7 +10,7 @@
     "dev": "cross-env ROLLUP_DISABLE_NATIVE=1 vite",
     "build": "cross-env ROLLUP_DISABLE_NATIVE=1 vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && gh-pages -d dist"
+    "deploy": "npm run build && node scripts/publish-to-root.js"
   },
   "dependencies": {
     "@google/genai": "^1.22.0",
