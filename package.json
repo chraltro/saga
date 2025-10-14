@@ -8,7 +8,7 @@
     "setup": "node scripts/setup-dev.js",
     "predev": "node scripts/setup-dev.js",
     "dev": "set ROLLUP_DISABLE_NATIVE=1&& vite",
-    "build": "set ROLLUP_DISABLE_NATIVE=1&& npx vite build",
+    "build": "set ROLLUP_DISABLE_NATIVE=1&& vite build",
     "preview": "vite preview",
     "deploy": "npm run build && node scripts/publish-to-root.js && git add -A && git commit -m \"Deploy site\" || echo Skipping commit && git push"
   },
@@ -20,10 +20,10 @@
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "cross-env": "^7.0.3",
+    "@vitejs/plugin-react": "^4.2.1",
     "gh-pages": "^6.3.0",
+    "rollup": "^3.29.4",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^5.4.10"
   }
 }
