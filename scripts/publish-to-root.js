@@ -1,4 +1,4 @@
-import { copyFileSync, readdirSync, mkdirSync, existsSync } from 'fs';
+import { copyFileSync, readdirSync, mkdirSync, existsSync, rmSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -31,6 +31,11 @@ try {
     throw new Error('dist directory not found. Run "vite build" first.');
   }
 
+  // Clean conflicting root artifacts
+  try { rmSync(join(rootDir, 'assets'), { recursive: true, force: true }); } catch {}
+  try { rmSync(join(rootDir, 'index.css'), { force: true }); } catch {}
+  try { rmSync(join(rootDir, 'index.tsx'), { force: true }); } catch {}
+
   // Copy index.html to root
   copyFileSync(join(distDir, 'index.html'), join(rootDir, 'index.html'));
   console.log('✔ Copied index.html to root');
@@ -55,4 +60,3 @@ try {
   console.error('Error publishing build to root:', error);
   process.exit(1);
 }
-
