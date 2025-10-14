@@ -26,5 +26,7 @@ yarn.lock
 pnpm-lock.yaml
 
 # GitHub Pages deployment files (generated)
-/index.html
-/assets/
+# Allow committing built site to root for Pages on main
+# (publish script manages these files)
+# /index.html
+# /assets/
