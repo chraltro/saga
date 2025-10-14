@@ -1,8 +1,9 @@
 {
-  "name": "chapter-summary-generator",
+  "name": "saga",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "homepage": "https://chraltro.github.io/saga",
   "scripts": {
     "setup": "node scripts/setup-dev.js",
     "predev": "node scripts/setup-dev.js",
