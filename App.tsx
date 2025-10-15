@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react';
 import { Chapter, Summary, BookRecord } from './types';
 import { parseChapters, extractBookTitle } from './services/parser';
 import { parseEpub } from './services/epubParser';
@@ -6,12 +6,14 @@ import { summarizeChapterStream } from './services/gemini';
 import * as storage from './services/storage';
 import * as auth from './services/auth';
 import LoginScreen from './components/LoginScreen';
-import FileUploadScreen from './components/FileUploadScreen';
 import ChapterMenu from './components/ChapterMenu';
-import SummaryDisplay from './components/SummaryDisplay';
-import ChatBot from './components/ChatBot';
 import { BookOpenIcon, ArrowLeftIcon, SagaLogo, SpinnerIcon, MenuIcon, XIcon, MessageCircleIcon } from './components/Icons';
 import logoImg from '/logo.png';
+
+// Lazy load heavy components with large dependencies
+const FileUploadScreen = lazy(() => import('./components/FileUploadScreen'));
+const SummaryDisplay = lazy(() => import('./components/SummaryDisplay'));
+const ChatBot = lazy(() => import('./components/ChatBot'));
 
 function App(): React.ReactElement {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -326,14 +328,21 @@ function App(): React.ReactElement {
 
   if (!currentBook) {
     return (
-      <FileUploadScreen
-        onFileUpload={handleFileUpload}
-        error={error}
-        history={history}
-        onLoadFromHistory={handleLoadFromHistory}
-        onClearHistory={handleClearHistory}
-        onLogout={handleLogout}
-      />
+      <Suspense fallback={
+        <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white gap-4">
+          <SpinnerIcon className="w-12 h-12 text-amber-400 animate-spin" />
+          <p className="text-gray-400">Loading library...</p>
+        </div>
+      }>
+        <FileUploadScreen
+          onFileUpload={handleFileUpload}
+          error={error}
+          history={history}
+          onLoadFromHistory={handleLoadFromHistory}
+          onClearHistory={handleClearHistory}
+          onLogout={handleLogout}
+        />
+      </Suspense>
     );
   }
 
@@ -435,23 +444,30 @@ function App(): React.ReactElement {
       )}
 
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
-        <SummaryDisplay
-            chapter={selectedChapter}
-            summary={summaryToDisplay}
-            isProcessing={isChapterProcessing}
-            onPreviousChapter={() => {
-              if (selectedChapterIndex > 0) {
-                handleSelectAndSummarizeChapter(selectedChapterIndex - 1);
-              }
-            }}
-            onNextChapter={() => {
-              if (currentBook && selectedChapterIndex < currentBook.chapters.length - 1) {
-                handleSelectAndSummarizeChapter(selectedChapterIndex + 1);
-              }
-            }}
-            hasPrevious={selectedChapterIndex > 0}
-            hasNext={currentBook ? selectedChapterIndex < currentBook.chapters.length - 1 : false}
-        />
+        <Suspense fallback={
+          <div className="flex flex-col items-center justify-center h-full text-gray-400 gap-4">
+            <SpinnerIcon className="w-12 h-12 text-amber-400 animate-spin" />
+            <p>Loading chapter...</p>
+          </div>
+        }>
+          <SummaryDisplay
+              chapter={selectedChapter}
+              summary={summaryToDisplay}
+              isProcessing={isChapterProcessing}
+              onPreviousChapter={() => {
+                if (selectedChapterIndex > 0) {
+                  handleSelectAndSummarizeChapter(selectedChapterIndex - 1);
+                }
+              }}
+              onNextChapter={() => {
+                if (currentBook && selectedChapterIndex < currentBook.chapters.length - 1) {
+                  handleSelectAndSummarizeChapter(selectedChapterIndex + 1);
+                }
+              }}
+              hasPrevious={selectedChapterIndex > 0}
+              hasNext={currentBook ? selectedChapterIndex < currentBook.chapters.length - 1 : false}
+          />
+        </Suspense>
       </main>
 
       {/* Floating Chat Button */}
@@ -467,11 +483,20 @@ function App(): React.ReactElement {
 
       {/* ChatBot */}
       {isChatBotOpen && (
-        <ChatBot
-          currentBook={currentBook}
-          selectedChapterIndex={selectedChapterIndex}
-          onClose={() => setIsChatBotOpen(false)}
-        />
+        <Suspense fallback={
+          <div className="fixed bottom-0 right-0 w-full md:w-96 h-[500px] bg-gray-800 border-l border-t border-amber-900/20 shadow-2xl rounded-t-xl flex items-center justify-center z-50">
+            <div className="flex flex-col items-center gap-4">
+              <SpinnerIcon className="w-10 h-10 text-amber-400 animate-spin" />
+              <p className="text-gray-400">Loading chat...</p>
+            </div>
+          </div>
+        }>
+          <ChatBot
+            currentBook={currentBook}
+            selectedChapterIndex={selectedChapterIndex}
+            onClose={() => setIsChatBotOpen(false)}
+          />
+        </Suspense>
       )}
     </div>
   );
