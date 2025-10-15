@@ -1,4 +1,4 @@
-# SAGA - Tales Retold by AI
+# Saga - Tales Retold by AI
 
 A Norse mythology-inspired book chapter summarizer that uses AI to generate summaries and saves your library to GitHub Gists for cross-device access.
 
