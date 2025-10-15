@@ -94,10 +94,10 @@ const FileUploadScreen: React.FC<FileUploadScreenProps> = ({
       <div className="max-w-4xl w-full p-8 space-y-12 flex-1 flex flex-col justify-center">
         <div className="text-center">
             <div className="flex justify-center mb-6">
-                <img src={logoImg} alt="SAGA Logo" className="w-24 h-24" />
+                <img src={logoImg} alt="Saga Logo" className="w-24 h-24" />
             </div>
             <h1 className="text-5xl font-extrabold text-white sm:text-6xl md:text-7xl mb-3 tracking-wide">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500">SAGA</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500">Saga</span>
             </h1>
             <p className="text-xl text-amber-400/80 mb-2 font-semibold tracking-wider">Your Story Companion</p>
             <p className="text-base text-gray-400 mb-8 max-w-lg mx-auto">
