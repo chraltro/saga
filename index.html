@@ -6,9 +6,19 @@
   <title>Saga - Chapter Summaries</title>
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
+  <link rel="stylesheet" href="shared/theme.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Saga-specific accent color - Autumn Fire */
+      --app-accent: #FF8C42;
+      --app-accent-dark: #E67A2E;
+      --app-accent-light: #FF9E5E;
+      --app-accent-rgb: 255, 140, 66;
+    }
+  </style>
   <script>
     window.tailwind = { config: {
       theme: {
@@ -24,6 +34,7 @@
             'gray-500': '#4a5565',
             'blue-light': '#e6e6e6',
             'amber-accent': '#d4a373',
+            'autumn-fire': '#FF8C42',
             'indigo-accent': '#4338ca',
             'cyan-accent': '#7dcfff',
           }
