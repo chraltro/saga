@@ -1,32 +1,21 @@
+# Saga (Book Summarizer) - Project-specific .gitignore
+
+# Build outputs
+dist/
+build/
+
 # Dependencies
 node_modules/
 
-# Build output
-build/
-
-# Environment variables
-.env
+# Environment files
 .env.local
+.env.*.local
+!.env.local.example
 
 # IDE
 .vscode/
 .idea/
+*.swp
 
 # OS
 .DS_Store
-Thumbs.db
-
-# Logs
-*.log
-npm-debug.log*
-
-# Package manager
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# GitHub Pages deployment files (generated)
-# Allow committing built site to root for Pages on main
-# (publish script manages these files)
-# /index.html
-# /assets/
