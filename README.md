@@ -1,59 +1,73 @@
-# Saga - Tales Retold by AI
+# Saga - Book Summarizer
 
-A Norse mythology-inspired book chapter summarizer that uses AI to generate summaries and saves your library to GitHub Gists for cross-device access.
+A chapter-by-chapter book analysis tool supporting TXT and EPUB formats with cross-device library synchronization via GitHub Gists.
 
 ## Features
 
-- 📖 Upload books in `.txt` or `.epub` format
-- 🤖 AI-powered chapter summaries using Gemini 2.5 Flash
-- 🎨 AI-generated chapter images using Imagen
-- ☁️ Cross-device sync via GitHub Gists
-- 🎨 Beautiful Norse-inspired UI with amber/bronze tones
+- TXT and EPUB file support with automatic chapter detection
+- Chapter summaries generated via Gemini 2.5 Flash
+- Optional chapter images via Imagen 4.0
+- Library persistence through private GitHub Gists
+- Cross-device access with cloud synchronization
+- Reading progress tracking
+- Mobile-responsive interface
 
 ## Prerequisites
 
-Before using SAGA, you'll need:
+- [GitHub Personal Access Token](https://github.com/settings/tokens/new?scopes=gist) with `gist` scope
+- [Google Gemini API key](https://aistudio.google.com/app/apikey)
 
-1. **Node.js** (for local development)
-2. **GitHub Personal Access Token** with `gist` scope
-   - Create one here: https://github.com/settings/tokens/new?scopes=gist
-3. **Gemini API Key**
-   - Get one here: https://aistudio.google.com/app/apikey
+## Usage
 
-## Run Locally
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Run the app:
-   ```bash
-   npm run dev
-   ```
-
-3. Open your browser and enter your credentials:
-   - **GitHub PAT**: Your Personal Access Token (used to save books to Gists)
-   - **Gemini API Key**: Your API key (used to generate summaries)
+1. Enter your credentials (stored locally in browser)
+2. Upload a book file (TXT or EPUB)
+3. Browse chapters and generate summaries as needed
+4. Your library syncs automatically to a private Gist
 
 ## How It Works
 
-1. **Login**: Enter your GitHub PAT and Gemini API key
-2. **Upload**: Upload a book file (.txt or .epub)
-3. **Summarize**: Click on chapters to generate AI summaries
-4. **Sync**: Your library is automatically saved to a private GitHub Gist
-5. **Access Anywhere**: Log in from any device to access your library
+The application parses uploaded books into chapters, then generates summaries on demand. Each book's metadata and summaries are stored in a private GitHub Gist, allowing access from any device with the same credentials.
 
-## Data Storage
+### File Format Support
 
-- **Credentials**: Stored locally in your browser's localStorage
-- **Book Library**: Stored in a private GitHub Gist (cross-device)
-- **Privacy**: Your credentials are never sent to any servers except GitHub and Google APIs
+- **TXT files:** Chapter detection via heading patterns and blank lines
+- **EPUB files:** Automatic parsing using epub.js with chapter extraction from the book's table of contents
 
-## Technologies
+### Data Storage
 
-- React + TypeScript
+- **Credentials:** Browser `localStorage` (local only)
+- **Library:** Private GitHub Gist (user-owned cloud storage)
+- **Books:** Processed and cached client-side during session
+
+## Local Development
+
+```bash
+git clone https://github.com/chraltro/saga.git
+cd saga
+npm install
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173)
+
+## Tech Stack
+
+- React 19 with TypeScript
+- Vite build tool
 - Tailwind CSS
 - Gemini 2.5 Flash (summaries)
 - Imagen 4.0 (images)
-- GitHub Gists (cloud storage)
+- epub.js (EPUB parsing)
+- GitHub Gists API
+
+## Deployment
+
+```bash
+npm run build
+```
+
+Deploy the `dist/` directory to any static hosting service.
+
+## License
+
+MIT
