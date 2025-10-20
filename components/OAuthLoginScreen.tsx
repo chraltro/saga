@@ -212,7 +212,7 @@ const OAuthLoginScreen: React.FC<OAuthLoginScreenProps> = ({ onSuccess, onError 
       {/* Wayfinder Logo Link */}
       <a
         href="../wayfinder/index.html"
-        className="fixed bottom-6 right-6 opacity-60 hover:opacity-100 transition-opacity z-30"
+        className="fixed top-6 right-6 opacity-60 hover:opacity-100 transition-opacity z-30"
         title="Back to Wayfinder"
       >
         <img src={`${import.meta.env.BASE_URL}wayfinder_logo.svg`} alt="Wayfinder" className="w-12 h-12" />
