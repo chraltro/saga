@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Saga - Chapter Summaries</title>
-  <link rel="icon" type="image/png" href="/saga/logo.png">
-  <link rel="apple-touch-icon" href="/saga/logo.png">
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="apple-touch-icon" href="/logo.png">
   <link rel="stylesheet" href="/index.css">
 
   <!-- Firebase SDK -->
-<script type="module">
+  <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getAuth, GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
     import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -24,15 +24,14 @@
       getDoc,
       setDoc
     };
-  </script>
+  </script>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/epubjs/dist/epub.min.js"></script>
-  <script type="module" crossorigin src="/saga/assets/index-C4fXBgSr.js"></script>
-  <link rel="modulepreload" crossorigin href="/saga/assets/react-vendor-B_uAldPx.js">
 </head>
 <body class="bg-gray-900 text-gray-100">
-  <div id="root"></div>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

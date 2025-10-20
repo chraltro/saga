@@ -113,7 +113,7 @@ const OAuthLoginScreen: React.FC<OAuthLoginScreenProps> = ({ onSuccess, onError 
     <div className="flex flex-col items-center justify-center h-screen bg-gray-900 px-4">
       <div className="text-center p-10 border-2 border-dashed border-amber-900/30 rounded-2xl max-w-2xl w-full bg-gray-800/50">
         <div className="flex items-center justify-center gap-4 mb-4">
-          <img src="/saga/logo.svg" alt="Saga Logo" className="w-16 h-16" />
+          <img src="/logo.svg" alt="Saga Logo" className="w-16 h-16" />
           <h1 className="text-4xl font-bold text-autumn-fire">Saga</h1>
         </div>
         <p className="text-lg text-gray-400 mb-8">
@@ -208,6 +208,15 @@ const OAuthLoginScreen: React.FC<OAuthLoginScreenProps> = ({ onSuccess, onError 
           </p>
         </div>
       </div>
+
+      {/* Wayfinder Logo Link */}
+      <a
+        href="../wayfinder/index.html"
+        className="fixed bottom-6 right-6 opacity-60 hover:opacity-100 transition-opacity z-30"
+        title="Back to Wayfinder"
+      >
+        <img src="/wayfinder_logo.svg" alt="Wayfinder" className="w-12 h-12" />
+      </a>
     </div>
   );
 };
