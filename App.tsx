@@ -507,6 +507,15 @@ function App(): React.ReactElement {
           />
         </Suspense>
       )}
+
+      {/* Wayfinder Logo Link */}
+      <a
+        href="../wayfinder/index.html"
+        className="fixed bottom-20 right-6 opacity-60 hover:opacity-100 transition-opacity z-30"
+        title="Back to Wayfinder"
+      >
+        <img src="/wayfinder_logo.svg" alt="Wayfinder" className="w-12 h-12" />
+      </a>
     </div>
   );
 }
