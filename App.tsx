@@ -5,7 +5,7 @@ import { parseEpub } from './services/epubParser';
 import { summarizeChapterStream } from './services/gemini';
 import * as storage from './services/storage';
 import * as auth from './services/auth';
-import LoginScreen from './components/LoginScreen';
+import OAuthLoginScreen from './components/OAuthLoginScreen';
 import ChapterMenu from './components/ChapterMenu';
 import { BookOpenIcon, ArrowLeftIcon, SagaLogo, SpinnerIcon, MenuIcon, XIcon, MessageCircleIcon } from './components/Icons';
 import logoImg from '/logo.png';
@@ -323,7 +323,16 @@ function App(): React.ReactElement {
   }
 
   if (!isAuthenticated) {
-    return <LoginScreen onLogin={handleLogin} error={loginError} />;
+    return (
+      <>
+        <OAuthLoginScreen onSuccess={handleLogin} onError={(err) => setLoginError(err)} />
+        {loginError && (
+          <div className="fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+            {loginError}
+          </div>
+        )}
+      </>
+    );
   }
 
   if (!currentBook) {
