@@ -3,7 +3,6 @@
 # Build outputs
 dist/
 build/
-assets/
 
 # Dependencies
 node_modules/
