@@ -42,9 +42,13 @@ export default defineConfig(({ mode }) => {
       },
       rollupOptions: {
         output: {
-          manualChunks: {
-            'react-vendor': ['react', 'react-dom'],
-            'markdown': ['marked']
+          manualChunks: (id: string) => {
+            if (id.includes('node_modules/react') || id.includes('node_modules/scheduler')) {
+              return 'react-vendor';
+            }
+            if (id.includes('node_modules/marked') || id.includes('node_modules/dompurify')) {
+              return 'markdown';
+            }
           }
         }
       },

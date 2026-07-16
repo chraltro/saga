@@ -212,30 +212,6 @@ export const LibraryIcon: React.FC<IconProps> = (props) => (
   </svg>
 );
 
-export const SagaLogo: React.FC<IconProps> = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="48"
-    height="48"
-    viewBox="0 0 48 48"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    {/* Viking rune stone inspired design with book pages */}
-    <path d="M10 6 L10 42 L24 36 L38 42 L38 6 Z" fill="none" stroke="currentColor" strokeWidth="2.5"/>
-    <line x1="24" y1="12" x2="24" y2="36" stroke="currentColor" strokeWidth="2"/>
-    {/* Rune-like marks */}
-    <path d="M15 14 L19 14 M17 14 L17 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M29 14 L33 18 M33 14 L29 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M15 22 L19 26 M15 26 L19 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M29 22 L33 22 M31 22 L31 26" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-  </svg>
-);
-
 export const MenuIcon: React.FC<IconProps> = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"

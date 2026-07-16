@@ -17,7 +17,7 @@ const OAuthLoginScreen: React.FC<OAuthLoginScreenProps> = ({ onSuccess, onError 
     // Load Firebase
     const loadFirebase = async () => {
       try {
-        const { initFirebase } = await import('../../shared/firebase-auth.js');
+        const { initFirebase } = await import('../shared/firebase-auth.js');
         await initFirebase();
       } catch (err) {
         console.error('Failed to load Firebase:', err);
@@ -33,7 +33,7 @@ const OAuthLoginScreen: React.FC<OAuthLoginScreenProps> = ({ onSuccess, onError 
     setStatus('Signing in with Google...');
 
     try {
-      const { signInWithGoogle, retrieveKeys } = await import('../../shared/firebase-auth.js');
+      const { signInWithGoogle, retrieveKeys } = await import('../shared/firebase-auth.js');
       await signInWithGoogle();
       setStatus('Checking for saved keys...');
 
@@ -71,18 +71,16 @@ const OAuthLoginScreen: React.FC<OAuthLoginScreenProps> = ({ onSuccess, onError 
     setStatus('Saving keys...');
 
     try {
-      const { getCurrentUser, saveKeys } = await import('../../shared/firebase-auth.js');
+      const { getCurrentUser, saveKeys } = await import('../shared/firebase-auth.js');
       const user = getCurrentUser();
 
       if (user) {
-        // Save to Firebase
         await saveKeys({
           geminiKey: manualGeminiKey.trim(),
           githubToken: manualGithubToken.trim() || null
         });
-        setStatus('Keys saved and synced!');
+        setStatus('Keys saved and synced');
       } else {
-        // Fallback to localStorage
         localStorage.setItem('gemini_api_key', manualGeminiKey.trim());
         if (manualGithubToken.trim()) {
           localStorage.setItem('github_token', manualGithubToken.trim());
@@ -94,12 +92,14 @@ const OAuthLoginScreen: React.FC<OAuthLoginScreenProps> = ({ onSuccess, onError 
       }, 500);
     } catch (err: any) {
       console.error('Save error:', err);
-      // Save to localStorage as fallback
+      // Sync failed, so keep the keys locally and say so rather than reporting success.
       localStorage.setItem('gemini_api_key', manualGeminiKey.trim());
       if (manualGithubToken.trim()) {
         localStorage.setItem('github_token', manualGithubToken.trim());
       }
-      onSuccess(manualGithubToken.trim() || '', manualGeminiKey.trim());
+      setIsLoading(false);
+      setStatus('');
+      onError('Could not sync your keys to the cloud. They are saved on this device only.');
     }
   };
 
@@ -211,7 +211,7 @@ const OAuthLoginScreen: React.FC<OAuthLoginScreenProps> = ({ onSuccess, onError 
 
       {/* Wayfinder Logo Link */}
       <a
-        href="../wayfinder/index.html"
+        href="https://chraltro.github.io/wayfinder/"
         className="hidden md:block fixed top-6 right-6 opacity-60 hover:opacity-100 transition-opacity z-30"
         title="Back to Wayfinder"
       >

@@ -2,6 +2,21 @@ import { Chapter } from '../types';
 
 declare const ePub: any;
 
+// Low enough to keep genuinely short chapters (a few lines of verse, an
+// interstitial note) while still skipping empty or cover-only spine items.
+const MIN_CHAPTER_LENGTH = 10;
+
+// Resolve an href to a comparable path, dropping any "#fragment".
+function resolveHref(book: any, href: string): string {
+  if (!href) return '';
+  const withoutFragment = href.split('#')[0];
+  try {
+    return book.path.resolve(withoutFragment);
+  } catch {
+    return withoutFragment;
+  }
+}
+
 // Helper to extract clean text from an HTML element
 function getElementText(element: HTMLElement): string {
   const blockElements = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE', 'SECTION', 'ARTICLE']);
@@ -107,9 +122,10 @@ export async function parseEpub(file: File | ArrayBuffer): Promise<{ title: stri
 
           console.log(`Section ${item.href}: ${content.length} chars, preview: "${content.substring(0, 100)}"`);
 
-          if (content.length > 50) { // Only add sections with meaningful content
-            // Try to find a title from the Table of Contents
-            const tocItem = toc.find((t: any) => book.path.resolve(t.href) === book.path.resolve(item.href));
+          if (content.length >= MIN_CHAPTER_LENGTH) {
+            // TOC hrefs often carry a fragment ("chap1.xhtml#part2") that the
+            // spine href does not, so compare the paths without it.
+            const tocItem = toc.find((t: any) => resolveHref(book, t.href) === resolveHref(book, item.href));
             const title = tocItem?.label?.trim().replace(/\s+/g, ' ') || `Chapter ${chapters.length + 1}`;
 
             chapters.push({ title, content });
@@ -140,7 +156,7 @@ export async function parseEpub(file: File | ArrayBuffer): Promise<{ title: stri
 
               const content = getElementText(doc.body);
               console.log(`TOC ${tocItem.href}: ${content.length} chars`);
-              if (content.length > 50) {
+              if (content.length >= MIN_CHAPTER_LENGTH) {
                 chapters.push({ title: tocItem.label.trim().replace(/\s+/g, ' '), content });
               }
             } catch (err) {

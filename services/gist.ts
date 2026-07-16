@@ -3,6 +3,9 @@ import { BookRecord } from '../types';
 const GIST_DESCRIPTION = 'SAGA App - Book Library Data';
 const GIST_INDEX_FILENAME = 'saga_library_index.json';
 const MAX_FILE_SIZE = 800000; // ~800KB per file to stay well under 1MB limit
+const MAX_GIST_PAGES = 20;
+// Rough allowance for the id/title/JSON scaffolding wrapping each chunk's chapters.
+const CHUNK_ENVELOPE_BYTES = 2000;
 
 interface GistFile {
   content?: string;
@@ -26,21 +29,28 @@ interface CreateGistResponse {
  */
 async function findSagaGist(githubPAT: string): Promise<string | null> {
   try {
-    const response = await fetch('https://api.github.com/gists', {
-      headers: {
-        'Authorization': `token ${githubPAT}`,
-        'Accept': 'application/vnd.github.v3+json',
-      },
-    });
+    const perPage = 100;
 
-    if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.status}`);
+    for (let page = 1; page <= MAX_GIST_PAGES; page++) {
+      const response = await fetch(`https://api.github.com/gists?per_page=${perPage}&page=${page}`, {
+        headers: {
+          'Authorization': `token ${githubPAT}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+
+      const gists: Gist[] = await response.json();
+      const sagaGist = gists.find(g => g.description === GIST_DESCRIPTION);
+      if (sagaGist) return sagaGist.id;
+
+      if (gists.length < perPage) return null;
     }
 
-    const gists: Gist[] = await response.json();
-    const sagaGist = gists.find(g => g.description === GIST_DESCRIPTION);
-
-    return sagaGist?.id || null;
+    return null;
   } catch (error) {
     console.error('Error finding SAGA gist:', error);
     throw error;
@@ -155,21 +165,35 @@ function splitBooksIntoFiles(books: BookRecord[]): Record<string, string> {
     if (bookData.length <= MAX_FILE_SIZE) {
       files[`book_${book.id}.json`] = bookData;
     } else {
-      // Split book into chunks
       console.log(`Book ${book.id} is too large (${bookData.length} bytes), splitting into chunks`);
 
-      // Split chapters into groups
-      const chunkSize = 10; // chapters per chunk
+      // Accumulate chapters until the serialized chunk approaches MAX_FILE_SIZE.
+      // A single oversized chapter still gets its own chunk: nothing can be done
+      // about that here short of splitting mid-chapter.
       const chunks: BookRecord[] = [];
+      let startIdx = 0;
 
-      for (let i = 0; i < book.chapters.length; i += chunkSize) {
-        const chunkChapters = book.chapters.slice(i, i + chunkSize);
+      while (startIdx < book.chapters.length) {
+        let endIdx = startIdx;
+        let size = CHUNK_ENVELOPE_BYTES;
+
+        while (endIdx < book.chapters.length) {
+          const chapterSize = JSON.stringify(book.chapters[endIdx]).length +
+            JSON.stringify(book.summaries[endIdx] ?? null).length +
+            JSON.stringify(book.images[endIdx] ?? null).length;
+
+          if (endIdx > startIdx && size + chapterSize > MAX_FILE_SIZE) break;
+
+          size += chapterSize;
+          endIdx++;
+        }
+
+        const chunkChapters = book.chapters.slice(startIdx, endIdx);
         const chunkSummaries: Record<number, any> = {};
         const chunkImages: Record<number, any> = {};
 
-        // Map summaries and images to chunk indices
         chunkChapters.forEach((_, localIdx) => {
-          const globalIdx = i + localIdx;
+          const globalIdx = startIdx + localIdx;
           if (book.summaries[globalIdx]) chunkSummaries[localIdx] = book.summaries[globalIdx];
           if (book.images[globalIdx]) chunkImages[localIdx] = book.images[globalIdx];
         });
@@ -182,6 +206,8 @@ function splitBooksIntoFiles(books: BookRecord[]): Record<string, string> {
           images: chunkImages,
           lastAccessed: book.lastAccessed,
         });
+
+        startIdx = endIdx;
       }
 
       // Store metadata with chunk info
@@ -238,6 +264,100 @@ async function getFileContent(file: GistFile | undefined): Promise<string | null
       }
     } catch (err) {
       console.error('Failed to fetch raw content:', err);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Reassemble one book from its gist files, whether chunked or stored whole.
+ */
+async function readBookFromFiles(files: Record<string, GistFile>, bookId: number): Promise<BookRecord | null> {
+  const metaContent = await getFileContent(files[`book_${bookId}_meta.json`]);
+
+  if (metaContent) {
+    const meta = JSON.parse(metaContent) as { id: number; title: string; totalChapters: number; chunkCount: number; lastAccessed: number };
+
+    const allChapters: any[] = [];
+    const allSummaries: Record<number, any> = {};
+    const allImages: Record<number, any> = {};
+
+    for (let chunkIdx = 0; chunkIdx < meta.chunkCount; chunkIdx++) {
+      const chunkContent = await getFileContent(files[`book_${bookId}_chunk_${chunkIdx}.json`]);
+      if (!chunkContent) {
+        console.warn(`No content for chunk ${chunkIdx} of book ${bookId}`);
+        continue;
+      }
+
+      try {
+        const chunk = JSON.parse(chunkContent) as BookRecord;
+        const baseIdx = allChapters.length;
+
+        chunk.chapters.forEach(ch => allChapters.push(ch));
+
+        Object.entries(chunk.summaries).forEach(([localIdx, summary]) => {
+          allSummaries[baseIdx + parseInt(localIdx)] = summary;
+        });
+        Object.entries(chunk.images).forEach(([localIdx, image]) => {
+          allImages[baseIdx + parseInt(localIdx)] = image;
+        });
+      } catch (err) {
+        console.error(`Failed to parse chunk ${chunkIdx} for book ${bookId}:`, err);
+      }
+    }
+
+    return {
+      id: meta.id,
+      title: meta.title,
+      chapters: allChapters,
+      summaries: allSummaries,
+      images: allImages,
+      lastAccessed: meta.lastAccessed,
+    };
+  }
+
+  const bookContent = await getFileContent(files[`book_${bookId}.json`]);
+  if (!bookContent) return null;
+
+  try {
+    return JSON.parse(bookContent) as BookRecord;
+  } catch (err) {
+    console.error(`Failed to parse book ${bookId}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Load a single book without pulling the rest of the library's chapter text.
+ */
+export async function loadBookFromGist(githubPAT: string, id: number): Promise<BookRecord | null> {
+  const gistId = await findSagaGist(githubPAT);
+  if (!gistId) return null;
+
+  const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+    headers: {
+      'Authorization': `token ${githubPAT}`,
+      'Accept': 'application/vnd.github.v3+json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load gist: ${response.status}`);
+  }
+
+  const gist: Gist = await response.json();
+  const book = await readBookFromFiles(gist.files, id);
+  if (book) return book;
+
+  // Old single-file format has no per-book file to read.
+  const oldFormatContent = await getFileContent(gist.files['saga_library.json']);
+  if (oldFormatContent) {
+    try {
+      const books = JSON.parse(oldFormatContent) as BookRecord[];
+      return books.find(b => b.id === id) || null;
+    } catch (err) {
+      console.error('Failed to parse old format:', err);
     }
   }
 
@@ -363,97 +483,24 @@ export async function loadBooksFromGist(githubPAT: string): Promise<BookRecord[]
       if (index.length === 0) {
         console.log('Index is empty, falling through to reconstruction');
       } else {
-      const books: BookRecord[] = [];
+        const books: BookRecord[] = [];
 
-      // Load each book from its individual file or chunks
-      for (const indexEntry of index) {
-        const bookId = indexEntry.id;
-
-        // Check if book is chunked
-        const metaFilename = `book_${bookId}_meta.json`;
-        const metaContent = await getFileContent(gist.files[metaFilename]);
-
-        if (metaContent) {
-          // Chunked book
+        for (const indexEntry of index) {
           try {
-            const meta = JSON.parse(metaContent) as { id: number; title: string; totalChapters: number; chunkCount: number; lastAccessed: number };
-
-            // Load all chunks
-            const allChapters: any[] = [];
-            const allSummaries: Record<number, any> = {};
-            const allImages: Record<number, any> = {};
-
-            for (let chunkIdx = 0; chunkIdx < meta.chunkCount; chunkIdx++) {
-              const chunkFilename = `book_${bookId}_chunk_${chunkIdx}.json`;
-              const chunkFile = gist.files[chunkFilename];
-
-              const chunkContent = await getFileContent(chunkFile);
-              if (chunkContent) {
-                try {
-                  const chunk = JSON.parse(chunkContent) as BookRecord;
-                  const baseIdx = allChapters.length; // Use current length, not chunkIdx * 10
-
-                  // Append chapters
-                  chunk.chapters.forEach((ch) => {
-                    allChapters.push(ch);
-                  });
-
-                  // Map summaries and images using the base index
-                  Object.entries(chunk.summaries).forEach(([localIdx, summary]) => {
-                    allSummaries[baseIdx + parseInt(localIdx)] = summary;
-                  });
-
-                  Object.entries(chunk.images).forEach(([localIdx, image]) => {
-                    allImages[baseIdx + parseInt(localIdx)] = image;
-                  });
-                } catch (err) {
-                  console.error(`Failed to parse chunk ${chunkIdx} for book ${bookId}:`, err);
-                  // Continue with other chunks
-                }
-              }
-            }
-
-            books.push({
-              id: meta.id,
-              title: meta.title,
-              chapters: allChapters,
-              summaries: allSummaries,
-              images: allImages,
-              lastAccessed: meta.lastAccessed,
-            });
-
-            console.log(`Loaded chunked book ${bookId} from ${meta.chunkCount} chunks`);
+            const book = await readBookFromFiles(gist.files, indexEntry.id);
+            if (book) books.push(book);
           } catch (err) {
-            console.error(`Failed to load chunked book ${bookId}:`, err);
-          }
-        } else {
-          console.log(`No metadata found for book ${bookId}, checking for regular file`);
-        }
-
-        if (!metaContent) {
-          // Regular (non-chunked) book
-          const bookFilename = `book_${bookId}.json`;
-          const bookContent = await getFileContent(gist.files[bookFilename]);
-
-          if (bookContent) {
-            try {
-              const book = JSON.parse(bookContent) as BookRecord;
-              books.push(book);
-              console.log(`Loaded regular book ${bookId}`);
-            } catch (err) {
-              console.error(`Failed to parse book ${bookId}:`, err);
-            }
+            console.error(`Failed to load book ${indexEntry.id}:`, err);
           }
         }
-      }
 
-      console.log(`Returning ${books.length} books from new format`);
-      return books;
+        console.log(`Returning ${books.length} books from new format`);
+        return books;
       }
     }
 
     // Check for old format (single file - backward compatibility)
-    const oldFormatContent = gist.files['saga_library.json']?.content;
+    const oldFormatContent = await getFileContent(gist.files['saga_library.json']);
     if (oldFormatContent) {
       console.log('Loading books from old format (single file)');
       try {
@@ -471,93 +518,19 @@ export async function loadBooksFromGist(githubPAT: string): Promise<BookRecord[]
     // Fallback: Check for book files without index (index missing scenario)
     console.log('No index found, checking for individual book files...');
     const books: BookRecord[] = [];
-    const processedBookIds = new Set<number>();
 
+    const bookIds = new Set<number>();
     for (const filename of Object.keys(gist.files)) {
-      // Handle chunked books
-      const chunkMatch = filename.match(/^book_(\d+)_chunk_(\d+)\.json$/);
-      if (chunkMatch) {
-        const bookId = parseInt(chunkMatch[1]);
-        if (!processedBookIds.has(bookId)) {
-          processedBookIds.add(bookId);
-          // Load metadata
-          const metaContent = await getFileContent(gist.files[`book_${bookId}_meta.json`]);
-          if (metaContent) {
-            try {
-              const meta = JSON.parse(metaContent) as { id: number; title: string; totalChapters: number; chunkCount: number; lastAccessed: number };
+      const match = filename.match(/^book_(\d+)(?:_meta|_chunk_\d+)?\.json$/);
+      if (match) bookIds.add(parseInt(match[1]));
+    }
 
-              // Load all chunks
-              const allChapters: any[] = [];
-              const allSummaries: Record<number, any> = {};
-              const allImages: Record<number, any> = {};
-
-              for (let chunkIdx = 0; chunkIdx < meta.chunkCount; chunkIdx++) {
-                const chunkFilename = `book_${bookId}_chunk_${chunkIdx}.json`;
-                const chunkFile = gist.files[chunkFilename];
-                console.log(`Loading chunk ${chunkIdx}: truncated=${chunkFile?.truncated}, size=${chunkFile?.size}`);
-
-                const chunkContent = await getFileContent(chunkFile);
-                if (chunkContent) {
-                  try {
-                    const chunk = JSON.parse(chunkContent) as BookRecord;
-                    const baseIdx = allChapters.length; // Use current length, not chunkIdx * 10
-
-                    // Append chapters
-                    chunk.chapters.forEach((ch) => {
-                      allChapters.push(ch);
-                    });
-
-                    // Map summaries and images using the base index
-                    Object.entries(chunk.summaries).forEach(([localIdx, summary]) => {
-                      allSummaries[baseIdx + parseInt(localIdx)] = summary;
-                    });
-
-                    Object.entries(chunk.images).forEach(([localIdx, image]) => {
-                      allImages[baseIdx + parseInt(localIdx)] = image;
-                    });
-                    console.log(`Successfully loaded chunk ${chunkIdx}`);
-                  } catch (err) {
-                    console.error(`Failed to parse chunk ${chunkIdx}:`, err);
-                    // Continue with other chunks even if one fails
-                  }
-                } else {
-                  console.warn(`No content for chunk ${chunkIdx}`);
-                }
-              }
-
-              books.push({
-                id: meta.id,
-                title: meta.title,
-                chapters: allChapters,
-                summaries: allSummaries,
-                images: allImages,
-                lastAccessed: meta.lastAccessed,
-              });
-
-              console.log(`Reconstructed chunked book ${bookId} from ${meta.chunkCount} chunks`);
-            } catch (err) {
-              console.error(`Failed to load chunked book ${bookId}:`, err);
-            }
-          }
-        }
-        continue;
-      }
-
-      // Handle regular (non-chunked) book files
-      if (filename.startsWith('book_') && filename.endsWith('.json') && !filename.includes('_meta') && !filename.includes('_chunk_')) {
-        const bookContent = await getFileContent(gist.files[filename]);
-        if (bookContent) {
-          try {
-            const book = JSON.parse(bookContent) as BookRecord;
-            if (book.id && !processedBookIds.has(book.id)) {
-              processedBookIds.add(book.id);
-              books.push(book);
-              console.log(`Found book from file: ${filename}`);
-            }
-          } catch (err) {
-            console.error(`Failed to parse ${filename}:`, err);
-          }
-        }
+    for (const bookId of bookIds) {
+      try {
+        const book = await readBookFromFiles(gist.files, bookId);
+        if (book) books.push(book);
+      } catch (err) {
+        console.error(`Failed to load book ${bookId}:`, err);
       }
     }
 

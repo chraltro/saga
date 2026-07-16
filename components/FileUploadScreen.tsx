@@ -1,9 +1,8 @@
-
 import React, { useCallback, useState } from 'react';
-import { UploadCloudIcon, LibraryIcon, TrashIcon, SagaLogo } from './Icons';
+import { UploadCloudIcon, LibraryIcon, TrashIcon } from './Icons';
 import { BookRecord } from '../types';
-import { loadCredentials } from '../services/auth';
-import logoImg from '/logo.png';
+
+const logoImg = `${import.meta.env.BASE_URL}logo.png`;
 
 interface FileUploadScreenProps {
   onFileUpload: (file: File) => void;
@@ -23,21 +22,6 @@ const FileUploadScreen: React.FC<FileUploadScreenProps> = ({
   onLogout,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
-  const [showQuickLogin, setShowQuickLogin] = useState(false);
-
-  const getQuickLoginCode = () => {
-    const creds = loadCredentials();
-    if (creds) {
-      return btoa(`${creds.githubPAT}:::${creds.geminiApiKey}`);
-    }
-    return '';
-  };
-
-  const copyQuickLoginCode = () => {
-    const code = getQuickLoginCode();
-    navigator.clipboard.writeText(code);
-    alert('Quick login code copied! You can now paste this on another device to log in quickly.');
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -76,13 +60,6 @@ const FileUploadScreen: React.FC<FileUploadScreenProps> = ({
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900">
       {onLogout && (
         <div className="hidden md:flex absolute top-4 right-4 gap-2">
-          <button
-            onClick={copyQuickLoginCode}
-            className="text-xs px-3 py-1 bg-amber-600/20 text-amber-400 hover:bg-amber-600/30 rounded transition-colors"
-            title="Copy quick login code"
-          >
-            Copy Login Code
-          </button>
           <button
             onClick={onLogout}
             className="text-sm text-gray-400 hover:text-amber-400 transition-colors"
@@ -169,13 +146,6 @@ const FileUploadScreen: React.FC<FileUploadScreenProps> = ({
       {/* Mobile buttons at bottom */}
       {onLogout && (
         <div className="md:hidden w-full p-4 border-t border-gray-800 flex justify-center gap-4">
-          <button
-            onClick={copyQuickLoginCode}
-            className="text-xs px-3 py-2 bg-amber-600/20 text-amber-400 hover:bg-amber-600/30 rounded transition-colors"
-            title="Copy quick login code"
-          >
-            Copy Login Code
-          </button>
           <button
             onClick={onLogout}
             className="text-sm px-3 py-2 text-gray-400 hover:text-amber-400 transition-colors"

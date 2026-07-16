@@ -1,12 +1,13 @@
 /**
  * Firebase Configuration
  *
- * SETUP REQUIRED:
- * 1. Go to https://console.firebase.google.com/
- * 2. Create a new project (or use existing)
- * 3. Enable Google Authentication: Authentication > Sign-in method > Google > Enable
- * 4. Enable Firestore Database: Firestore Database > Create database > Start in production mode
- * 5. Set Firestore rules to:
+ * These are the real values for this project's Firebase web app, not placeholders.
+ * A Firebase web API key is a public project identifier, not a secret: it ships in
+ * every client bundle by design and grants no access on its own. Access is controlled
+ * by the Firestore security rules and the list of authorized domains in the Firebase
+ * console, so those are what must stay correct.
+ *
+ * The Firestore rules this app expects:
  *    rules_version = '2';
  *    service cloud.firestore {
  *      match /databases/{database}/documents {
@@ -15,8 +16,6 @@
  *        }
  *      }
  *    }
- * 6. Get your config from Project Settings > General > Your apps > SDK setup and configuration
- * 7. Replace the placeholder values below with your actual Firebase config
  */
 
 export const FIREBASE_CONFIG = {

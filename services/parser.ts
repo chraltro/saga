@@ -34,55 +34,79 @@ export function extractBookTitle(text: string): string {
   return 'Untitled Book';
 }
 
+const ROMAN = '[IVXLCDM]+';
+
+// "Chapter 12", "CHAPTER XIV", "Part 3", with an optional trailing title
+// ("Chapter 1: The Beginning", "Chapter 1 - The Beginning").
+const LABELLED_HEADING = new RegExp(
+  `^(chapter|part|book|section)\\s+(\\d{1,3}|${ROMAN})\\b\\s*[.:\\u2013-]?\\s*(.{0,60})$`,
+  'i'
+);
+
+// A bare numeral or roman numeral on its own line.
+const BARE_NUMBER_HEADING = new RegExp(`^(\\d{1,3}|${ROMAN})[.)]?$`);
+
+function hasCasedLetters(text: string): boolean {
+  return text.toLowerCase() !== text.toUpperCase();
+}
+
+function isAllCapsHeading(line: string): boolean {
+  // toUpperCase() is a no-op for scripts without case, so require cased letters
+  // before treating "all caps" as meaningful.
+  return (
+    line.length < 50 &&
+    hasCasedLetters(line) &&
+    line === line.toUpperCase() &&
+    !BANNED_TITLES.has(line)
+  );
+}
+
+// Table-of-contents rows look like headings ("Chapter 1 ..... 7"), so reject
+// lines that trail off into dot leaders or a page number.
+const TOC_ROW = /(\.\s*){3,}|\s{3,}\d{1,4}$/;
+
+function isChapterHeading(line: string): boolean {
+  if (line.length === 0 || line.length > 60) return false;
+  if (BANNED_TITLES.has(line.toUpperCase())) return false;
+  if (TOC_ROW.test(line)) return false;
+
+  if (LABELLED_HEADING.test(line)) return true;
+  if (BARE_NUMBER_HEADING.test(line)) return true;
+  return isAllCapsHeading(line);
+}
+
 export function parseChapters(text: string): Chapter[] {
   const chapters: Chapter[] = [];
   if (!text) return chapters;
 
-  // Prepending newlines ensures that a chapter title at the very beginning
-  // of the file can be detected by the "four empty lines before" rule.
-  const processedText = '\n\n\n\n' + text;
-  const lines = processedText.split('\n');
-  
+  // Leading blank lines let a heading on the very first line qualify.
+  const lines = ('\n\n' + text.replace(/\r\n?/g, '\n')).split('\n');
+
   let currentChapter: { title: string; content: string } | null = null;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmedLine = line.trim();
 
-    // A potential chapter title is short, all-caps, contains letters, and is not a banned term.
-    const isPotentiallyTitle =
-      trimmedLine.length > 0 &&
-      trimmedLine.length < 50 &&
-      trimmedLine === trimmedLine.toUpperCase() &&
-      /[A-Z]/.test(trimmedLine) &&
-      !/^[0-9\s.,!?-]+$/.test(trimmedLine) &&
-      !BANNED_TITLES.has(trimmedLine); // Exclude common non-chapter headings.
-    
-    // A line is a title if it meets the style criteria AND is preceded by at least four empty lines.
-    const hasFourEmptyLinesBefore = i >= 4 && 
-                                    lines[i - 1].trim() === '' && 
-                                    lines[i - 2].trim() === '' &&
-                                    lines[i - 3].trim() === '' &&
-                                    lines[i - 4].trim() === '';
+    // Headings sit on their own line, after a blank line and before more text.
+    const blankBefore = i >= 1 && lines[i - 1].trim() === '';
+    const nextNonBlank = lines.slice(i + 1).find(l => l.trim() !== '');
+    const hasBodyAfter = nextNonBlank !== undefined;
 
-    if (isPotentiallyTitle && hasFourEmptyLinesBefore) {
-      // This is a chapter title.
-      if (currentChapter) {
-        // Save the previous chapter, trimming trailing whitespace which includes the separator newlines.
+    if (blankBefore && hasBodyAfter && isChapterHeading(trimmedLine)) {
+      if (currentChapter && currentChapter.content.trim()) {
         chapters.push({ ...currentChapter, content: currentChapter.content.trim() });
       }
       currentChapter = { title: trimmedLine, content: '' };
     } else if (currentChapter) {
-      // This is a line of content for the current chapter.
       currentChapter.content += line + '\n';
     }
-    // Any content before the first valid chapter title is ignored.
+    // Any content before the first heading is ignored.
   }
 
-  // Add the last chapter if it exists and has content.
   if (currentChapter && currentChapter.content.trim()) {
     chapters.push({ ...currentChapter, content: currentChapter.content.trim() });
   }
-  
+
   return chapters;
 }

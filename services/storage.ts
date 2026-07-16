@@ -1,6 +1,6 @@
 import { BookRecord } from '../types';
 import { loadCredentials } from './auth';
-import { loadBooksFromGist, loadBooksMetadataFromGist, saveBooksToGist } from './gist';
+import { loadBookFromGist, loadBooksFromGist, loadBooksMetadataFromGist, saveBooksToGist } from './gist';
 
 /**
  * Initialize storage (no-op for gist-based storage)
@@ -8,6 +8,17 @@ import { loadBooksFromGist, loadBooksMetadataFromGist, saveBooksToGist } from '.
 export async function initStorage(): Promise<void> {
   // No initialization needed for gist-based storage
   return Promise.resolve();
+}
+
+// Every gist write is a read-modify-write of the whole library, so concurrent
+// writers would clobber each other. All mutations run through this queue.
+let writeQueue: Promise<unknown> = Promise.resolve();
+
+function enqueue<T>(task: () => Promise<T>): Promise<T> {
+  const result = writeQueue.then(task, task);
+  // Keep the chain alive after a rejection so one failure cannot stall the queue.
+  writeQueue = result.then(() => undefined, () => undefined);
+  return result;
 }
 
 /**
@@ -101,59 +112,67 @@ export async function getAllBooks(): Promise<BookRecord[]> {
  * Get a single book by ID
  */
 export async function getBook(id: number): Promise<BookRecord | null> {
-  const books = await getAllBooks();
-  return books.find(b => b.id === id) || null;
+  const credentials = loadCredentials();
+  if (!credentials?.githubPAT) {
+    throw new Error('GitHub PAT not found');
+  }
+
+  const book = await loadBookFromGist(credentials.githubPAT, id);
+  return book ? cleanBookData(book) : null;
 }
 
 /**
  * Add a new book
  */
 export async function addBook(book: Omit<BookRecord, 'id'>): Promise<number> {
-  const credentials = loadCredentials();
-  if (!credentials?.githubPAT) {
-    throw new Error('GitHub PAT not found');
-  }
+  return enqueue(async () => {
+    const credentials = loadCredentials();
+    if (!credentials?.githubPAT) {
+      throw new Error('GitHub PAT not found');
+    }
 
-  const books = await getAllBooks();
+    const books = await getAllBooks();
 
-  // Generate new ID
-  const maxId = books.reduce((max, b) => Math.max(max, b.id || 0), 0);
-  const newId = maxId + 1;
+    const maxId = books.reduce((max, b) => Math.max(max, b.id || 0), 0);
+    const newId = maxId + 1;
 
-  const newBook: BookRecord = { ...book, id: newId };
-  const updatedBooks = [newBook, ...books];
+    const newBook: BookRecord = { ...book, id: newId };
+    await saveBooksToGist(credentials.githubPAT, [newBook, ...books]);
 
-  await saveBooksToGist(credentials.githubPAT, updatedBooks);
-
-  // Wait a moment for GitHub to process the gist
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  return newId;
+    return newId;
+  });
 }
 
 /**
  * Update an existing book
  */
 export async function updateBook(book: BookRecord): Promise<void> {
-  const credentials = loadCredentials();
-  if (!credentials?.githubPAT) {
-    throw new Error('GitHub PAT not found');
-  }
+  return enqueue(async () => {
+    const credentials = loadCredentials();
+    if (!credentials?.githubPAT) {
+      throw new Error('GitHub PAT not found');
+    }
 
-  const books = await getAllBooks();
-  const updatedBooks = books.map(b => b.id === book.id ? book : b);
+    const books = await getAllBooks();
+    const exists = books.some(b => b.id === book.id);
+    const updatedBooks = exists
+      ? books.map(b => (b.id === book.id ? book : b))
+      : [book, ...books];
 
-  await saveBooksToGist(credentials.githubPAT, updatedBooks);
+    await saveBooksToGist(credentials.githubPAT, updatedBooks);
+  });
 }
 
 /**
  * Clear all books (history)
  */
 export async function clearHistory(): Promise<void> {
-  const credentials = loadCredentials();
-  if (!credentials?.githubPAT) {
-    throw new Error('GitHub PAT not found');
-  }
+  return enqueue(async () => {
+    const credentials = loadCredentials();
+    if (!credentials?.githubPAT) {
+      throw new Error('GitHub PAT not found');
+    }
 
-  await saveBooksToGist(credentials.githubPAT, []);
+    await saveBooksToGist(credentials.githubPAT, []);
+  });
 }

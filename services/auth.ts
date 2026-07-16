@@ -49,8 +49,9 @@ export function isAuthenticated(): boolean {
  * Validate GitHub PAT format
  */
 export function validateGitHubPAT(pat: string): boolean {
-  // GitHub PATs start with ghp_, github_pat_, or are classic tokens (40 chars)
-  return /^(ghp_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9_]{82}|[a-f0-9]{40})$/.test(pat);
+  // Classic tokens (ghp_ or a bare 40-char hex) and fine-grained tokens
+  // (github_pat_), whose length GitHub has not committed to.
+  return /^(ghp_[a-zA-Z0-9]{36,}|github_pat_[a-zA-Z0-9_]{20,}|[a-f0-9]{40})$/.test(pat);
 }
 
 /**

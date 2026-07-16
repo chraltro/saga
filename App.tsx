@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { Chapter, Summary, BookRecord } from './types';
 import { parseChapters, extractBookTitle } from './services/parser';
 import { parseEpub } from './services/epubParser';
@@ -7,8 +7,9 @@ import * as storage from './services/storage';
 import * as auth from './services/auth';
 import OAuthLoginScreen from './components/OAuthLoginScreen';
 import ChapterMenu from './components/ChapterMenu';
-import { BookOpenIcon, ArrowLeftIcon, SagaLogo, SpinnerIcon, MenuIcon, XIcon, MessageCircleIcon } from './components/Icons';
-import logoImg from '/logo.png';
+import { ArrowLeftIcon, SpinnerIcon, MenuIcon, XIcon, MessageCircleIcon } from './components/Icons';
+
+const logoImg = `${import.meta.env.BASE_URL}logo.png`;
 
 // Lazy load heavy components with large dependencies
 const FileUploadScreen = lazy(() => import('./components/FileUploadScreen'));
@@ -31,8 +32,41 @@ function App(): React.ReactElement {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isChatBotOpen, setIsChatBotOpen] = useState<boolean>(false);
 
-  // Debounce timer for saving to gist
-  const saveTimerRef = React.useRef<number | null>(null);
+  // Debounced save state. The book pending a save is held here rather than
+  // captured in the timer callback so that every scheduler shares one timer
+  // and always persists the newest state.
+  const saveTimerRef = useRef<number | null>(null);
+  const pendingSaveRef = useRef<BookRecord | null>(null);
+  const currentBookRef = useRef<BookRecord | null>(null);
+  const inFlightRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    currentBookRef.current = currentBook;
+  }, [currentBook]);
+
+  const flushSave = useCallback(() => {
+    if (saveTimerRef.current !== null) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
+    const book = pendingSaveRef.current;
+    pendingSaveRef.current = null;
+    if (!book) return;
+
+    storage.updateBook(book).catch(err => {
+      console.error("Failed to update book in storage:", err);
+      setError("Could not save progress to GitHub Gist. Changes may be lost.");
+    });
+  }, []);
+
+  const scheduleSave = useCallback((book: BookRecord) => {
+    pendingSaveRef.current = book;
+    if (saveTimerRef.current !== null) {
+      clearTimeout(saveTimerRef.current);
+    }
+    saveTimerRef.current = window.setTimeout(flushSave, 2000);
+  }, [flushSave]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -54,12 +88,13 @@ function App(): React.ReactElement {
     };
     checkAuth();
 
-    // Cleanup: flush any pending saves on unmount
     return () => {
-      if (saveTimerRef.current !== null) {
-        clearTimeout(saveTimerRef.current);
-      }
+      flushSave();
     };
+  }, [flushSave]);
+
+  const handleLoginError = useCallback((err: string) => {
+    setLoginError(err);
   }, []);
 
   const handleLogin = useCallback(async (githubPAT: string, geminiApiKey: string) => {
@@ -88,6 +123,7 @@ function App(): React.ReactElement {
   const handleLogout = useCallback(() => {
     auth.clearCredentials();
     setIsAuthenticated(false);
+    currentBookRef.current = null;
     setCurrentBook(null);
     setHistory([]);
     setError(null);
@@ -95,25 +131,14 @@ function App(): React.ReactElement {
   }, []);
 
   const updateCurrentBook = useCallback((updatedBookData: Partial<BookRecord>) => {
-    setCurrentBook(prevBook => {
-      if (!prevBook) return null;
-      const newBook = { ...prevBook, ...updatedBookData };
+    const prevBook = currentBookRef.current;
+    if (!prevBook) return;
 
-      // Debounce saves to prevent race conditions
-      if (saveTimerRef.current !== null) {
-        clearTimeout(saveTimerRef.current);
-      }
-
-      saveTimerRef.current = window.setTimeout(() => {
-        storage.updateBook(newBook).catch(err => {
-          console.error("Failed to update book in storage:", err);
-          setError("Could not save progress to GitHub Gist. Changes may be lost.");
-        });
-      }, 2000); // Wait 2 seconds after last update before saving
-
-      return newBook;
-    });
-  }, []);
+    const newBook = { ...prevBook, ...updatedBookData };
+    currentBookRef.current = newBook;
+    setCurrentBook(newBook);
+    scheduleSave(newBook);
+  }, [scheduleSave]);
 
 
   const handleFileUpload = useCallback(async (file: File) => {
@@ -151,6 +176,7 @@ function App(): React.ReactElement {
       const newId = await storage.addBook(newBook);
       const fullBookRecord = { ...newBook, id: newId };
 
+      currentBookRef.current = fullBookRecord;
       setCurrentBook(fullBookRecord);
       setHistory(prev => [fullBookRecord, ...prev.filter(b => b.id !== newId)]);
       setSelectedChapterIndex(0);
@@ -172,6 +198,7 @@ function App(): React.ReactElement {
       if (book) {
         book.lastAccessed = Date.now();
         await storage.updateBook(book);
+        currentBookRef.current = book;
         setCurrentBook(book);
         setSelectedChapterIndex(0);
         setStreamingSummaries({});
@@ -182,30 +209,46 @@ function App(): React.ReactElement {
       } else {
         setError("Could not load the selected book from history.");
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An unknown error occurred.";
+      setError(`Could not load the selected book. ${message}`);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   const handleClearHistory = useCallback(async () => {
-    if (window.confirm("Are you sure you want to delete all your books from GitHub Gist? This action cannot be undone.")) {
+    if (!window.confirm("Are you sure you want to delete all your books from GitHub Gist? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
       await storage.clearHistory();
       setHistory([]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An unknown error occurred.";
+      setError(`Could not clear your library. ${message}`);
     }
   }, []);
 
   const handleBackToLibrary = useCallback(() => {
+    flushSave();
+    currentBookRef.current = null;
     setCurrentBook(null);
     setError(null);
-  }, []);
+  }, [flushSave]);
   
   const summarizeChapterByIndex = useCallback(async (index: number) => {
-    if (!currentBook || currentBook.summaries[index] || processingChapterIndex === index) {
+    // Read through the ref: a batch run awaits several of these in a loop and
+    // must see summaries written by earlier iterations.
+    const book = currentBookRef.current;
+    if (!book || book.summaries[index] || inFlightRef.current.has(index)) {
       return;
     }
-    const chapter = currentBook.chapters[index];
+    const chapter = book.chapters[index];
     if (!chapter) return;
 
+    inFlightRef.current.add(index);
     setProcessingChapterIndex(index);
     setError(null);
     setStreamingSummaries(prev => ({
@@ -219,7 +262,7 @@ function App(): React.ReactElement {
       let finalSummary: Summary | null = null;
       
       for await (const chunk of stream) {
-        fullResponseText += chunk.text;
+        fullResponseText += chunk.text ?? '';
 
         const currentSummary: Summary = { bullets: [], quote: '' };
         const lines = fullResponseText.split('\n');
@@ -229,43 +272,46 @@ function App(): React.ReactElement {
             currentSummary.quote = line.substring(7).trim();
           }
         });
-        
+
         finalSummary = currentSummary;
-        setStreamingSummaries(prev => ({ ...prev, [index]: finalSummary! }));
+        setStreamingSummaries(prev => ({ ...prev, [index]: currentSummary }));
       }
 
-      if (finalSummary) {
-        // Use functional update to avoid stale closure
-        setCurrentBook(prevBook => {
-          if (!prevBook) return null;
-          const updatedBook = {
-            ...prevBook,
-            summaries: { ...prevBook.summaries, [index]: finalSummary }
-          };
+      const parsedAnything = finalSummary !== null &&
+        (finalSummary.bullets.length > 0 || finalSummary.quote.length > 0);
 
-          // Debounce the save
-          if (saveTimerRef.current !== null) {
-            clearTimeout(saveTimerRef.current);
-          }
-          saveTimerRef.current = window.setTimeout(() => {
-            storage.updateBook(updatedBook).catch(err => {
-              console.error("Failed to update book in storage:", err);
-              setError("Could not save progress to GitHub Gist. Changes may be lost.");
-            });
-          }, 2000);
-
-          return updatedBook;
+      if (!parsedAnything) {
+        // Drop the placeholder so the chapter reads as unsummarized rather than
+        // showing an empty summary that was never persisted.
+        setStreamingSummaries(prev => {
+          const next = { ...prev };
+          delete next[index];
+          return next;
         });
+        setError(`The AI returned no summary for chapter: ${chapter.title}. Please try again.`);
+        return;
+      }
+
+      const prevBook = currentBookRef.current;
+      if (prevBook) {
+        const updatedBook: BookRecord = {
+          ...prevBook,
+          summaries: { ...prevBook.summaries, [index]: finalSummary! }
+        };
+        currentBookRef.current = updatedBook;
+        setCurrentBook(updatedBook);
+        scheduleSave(updatedBook);
       }
 
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unknown error occurred.";
       setError(`Failed to summarize chapter: ${chapter.title}. ${message}`);
     } finally {
+        inFlightRef.current.delete(index);
         // Always clear processing state for this chapter
         setProcessingChapterIndex(prev => prev === index ? null : prev);
     }
-  }, [currentBook, processingChapterIndex]);
+  }, [scheduleSave]);
 
 
   const handleSelectAndSummarizeChapter = useCallback(async (index: number) => {
@@ -275,31 +321,27 @@ function App(): React.ReactElement {
   }, [summarizeChapterByIndex]);
 
   const handleSummarizeNextFive = useCallback(async () => {
-    if (!currentBook) return;
-    setIsBatchProcessing(true);
+    const book = currentBookRef.current;
+    if (!book) return;
 
-    // Find all unsummarized chapter indices
-    const unsummarizedIndices: number[] = [];
-    for (let i = 0; i < currentBook.chapters.length; i++) {
-      if (!currentBook.summaries[i]) {
-        unsummarizedIndices.push(i);
+    const indicesToProcess: number[] = [];
+    for (let i = 0; i < book.chapters.length && indicesToProcess.length < 5; i++) {
+      if (!book.summaries[i]) {
+        indicesToProcess.push(i);
       }
     }
 
-    if (unsummarizedIndices.length === 0) {
-        setIsBatchProcessing(false);
-        return;
-    }
+    if (indicesToProcess.length === 0) return;
 
-    // Take the first 5 unsummarized chapters
-    const indicesToProcess = unsummarizedIndices.slice(0, 5);
-
-    for (const index of indicesToProcess) {
+    setIsBatchProcessing(true);
+    try {
+      for (const index of indicesToProcess) {
         await summarizeChapterByIndex(index);
+      }
+    } finally {
+      setIsBatchProcessing(false);
     }
-
-    setIsBatchProcessing(false);
-  }, [currentBook, summarizeChapterByIndex]);
+  }, [summarizeChapterByIndex]);
 
   const selectedChapter = useMemo(() => {
     return currentBook?.chapters[selectedChapterIndex];
@@ -325,7 +367,7 @@ function App(): React.ReactElement {
   if (!isAuthenticated) {
     return (
       <>
-        <OAuthLoginScreen onSuccess={handleLogin} onError={(err) => setLoginError(err)} />
+        <OAuthLoginScreen onSuccess={handleLogin} onError={handleLoginError} />
         {loginError && (
           <div className="fixed top-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50">
             {loginError}
@@ -510,7 +552,7 @@ function App(): React.ReactElement {
 
       {/* Wayfinder Logo Link */}
       <a
-        href="../wayfinder/index.html"
+        href="https://chraltro.github.io/wayfinder/"
         className="hidden md:block fixed top-6 right-6 opacity-60 hover:opacity-100 transition-opacity z-30"
         title="Back to Wayfinder"
       >

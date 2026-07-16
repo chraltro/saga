@@ -1,14 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
-import { Chapter, Summary, BookRecord } from '../types';
+import DOMPurify from 'dompurify';
+import { BookRecord } from '../types';
 import { chatWithGeminiStream, ChatMessage } from '../services/gemini';
 import { SendIcon, SpinnerIcon, SettingsIcon, XIcon, MaximizeIcon, MinimizeIcon } from './Icons';
 
-// Configure marked for inline rendering
+// async: false keeps marked.parse returning a string rather than a Promise.
 marked.setOptions({
   breaks: true,
   gfm: true,
+  async: false,
 });
+
+// Book text reaches the model and is echoed back into chat, so treat rendered
+// markdown as untrusted and strip any raw HTML it carries.
+function renderMarkdown(text: string): string {
+  return DOMPurify.sanitize(marked.parse(text) as string);
+}
 
 export type ContextType = 'current-chapter' | 'up-to-current' | 'all-chapters' | 'all-summaries' | 'summaries-up-to-current';
 
@@ -43,45 +51,62 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
     }
   }, [isProcessing, messages.length]);
 
-  // Build context based on selected type
+  // Chapters are null placeholders until a book's full text is loaded, so every
+  // access here has to tolerate a missing chapter.
   const buildContext = (): string => {
     const { chapters, summaries } = currentBook;
 
+    const titleOf = (idx: number) => chapters[idx]?.title ?? `Chapter ${idx + 1}`;
+
+    const fullTextOf = (idx: number) => {
+      const chapter = chapters[idx];
+      if (!chapter) return '';
+      return `\n\n=== Chapter ${idx + 1}: ${chapter.title} ===\n\n${chapter.content}`;
+    };
+
+    const summaryOf = (idx: number) => {
+      const summary = summaries[idx];
+      if (!summary) {
+        return `\n\n=== Chapter ${idx + 1}: ${titleOf(idx)} ===\n(Not yet summarized)\n`;
+      }
+
+      let text = `\n\n=== Chapter ${idx + 1}: ${titleOf(idx)} ===\nSummary:\n`;
+      summary.bullets.forEach(bullet => {
+        text += `- ${bullet}\n`;
+      });
+      if (summary.quote) {
+        text += `Quote: "${summary.quote}"\n`;
+      }
+      return text;
+    };
+
     switch (contextType) {
-      case 'current-chapter':
-        return `Chapter ${selectedChapterIndex + 1}: ${chapters[selectedChapterIndex].title}\n\n${chapters[selectedChapterIndex].content}`;
+      case 'current-chapter': {
+        const chapter = chapters[selectedChapterIndex];
+        if (!chapter) return '';
+        return `Chapter ${selectedChapterIndex + 1}: ${chapter.title}\n\n${chapter.content}`;
+      }
 
       case 'up-to-current': {
         let context = '';
         for (let i = 0; i <= selectedChapterIndex; i++) {
-          context += `\n\n=== Chapter ${i + 1}: ${chapters[i].title} ===\n\n${chapters[i].content}`;
+          context += fullTextOf(i);
         }
         return context;
       }
 
       case 'all-chapters': {
         let context = '';
-        chapters.forEach((ch, idx) => {
-          context += `\n\n=== Chapter ${idx + 1}: ${ch.title} ===\n\n${ch.content}`;
+        chapters.forEach((_, idx) => {
+          context += fullTextOf(idx);
         });
         return context;
       }
 
       case 'all-summaries': {
         let context = '';
-        chapters.forEach((ch, idx) => {
-          const summary = summaries[idx];
-          if (summary) {
-            context += `\n\n=== Chapter ${idx + 1}: ${ch.title} ===\nSummary:\n`;
-            summary.bullets.forEach(bullet => {
-              context += `- ${bullet}\n`;
-            });
-            if (summary.quote) {
-              context += `Quote: "${summary.quote}"\n`;
-            }
-          } else {
-            context += `\n\n=== Chapter ${idx + 1}: ${ch.title} ===\n(Not yet summarized)\n`;
-          }
+        chapters.forEach((_, idx) => {
+          context += summaryOf(idx);
         });
         return context;
       }
@@ -89,21 +114,13 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
       case 'summaries-up-to-current': {
         let context = '';
         for (let i = 0; i <= selectedChapterIndex; i++) {
-          const summary = summaries[i];
-          if (summary) {
-            context += `\n\n=== Chapter ${i + 1}: ${chapters[i].title} ===\nSummary:\n`;
-            summary.bullets.forEach(bullet => {
-              context += `- ${bullet}\n`;
-            });
-            if (summary.quote) {
-              context += `Quote: "${summary.quote}"\n`;
-            }
-          } else {
-            context += `\n\n=== Chapter ${i + 1}: ${chapters[i].title} ===\n(Not yet summarized)\n`;
-          }
+          context += summaryOf(i);
         }
-        // Add full text of current chapter
-        context += `\n\n=== Current Chapter (Full Text) ===\nChapter ${selectedChapterIndex + 1}: ${chapters[selectedChapterIndex].title}\n\n${chapters[selectedChapterIndex].content}`;
+
+        const current = chapters[selectedChapterIndex];
+        if (current) {
+          context += `\n\n=== Current Chapter (Full Text) ===\nChapter ${selectedChapterIndex + 1}: ${current.title}\n\n${current.content}`;
+        }
         return context;
       }
 
@@ -239,8 +256,8 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
             </label>
             <p className="text-xs text-gray-400 mt-1 ml-6">
               {allowSpoilers
-                ? '⚠️ AI can reveal future events'
-                : '✓ AI will only discuss up to chapter ' + (selectedChapterIndex + 1)
+                ? 'AI can reveal future events'
+                : 'AI will only discuss up to chapter ' + (selectedChapterIndex + 1)
               }
             </p>
           </div>
@@ -273,7 +290,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
               ) : (
                 <div
                   className="prose prose-sm prose-invert max-w-none break-words"
-                  dangerouslySetInnerHTML={{ __html: marked(msg.content) }}
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.content) }}
                 />
               )}
             </div>
@@ -284,7 +301,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ currentBook, selectedChapterIndex, on
             <div className="bg-gray-700 text-gray-100 px-4 py-2 rounded-lg max-w-[85%]">
               <div
                 className="prose prose-sm prose-invert max-w-none break-words"
-                dangerouslySetInnerHTML={{ __html: marked(streamingText) }}
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(streamingText) }}
               />
             </div>
           </div>

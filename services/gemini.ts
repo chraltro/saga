@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
-import { Summary } from '../types';
 import { loadCredentials } from './auth';
+
+const MODEL = 'gemini-3.5-flash';
 
 /**
  * Get the Gemini AI instance with user's API key
@@ -37,7 +38,7 @@ ${chapterContent}
 
   try {
     const response = await ai.models.generateContentStream({
-      model: 'gemini-2.5-flash',
+      model: MODEL,
       contents: prompt,
     });
     return response;
@@ -49,67 +50,13 @@ ${chapterContent}
 }
 
 
-/**
- * Generates an image based on a chapter's summary.
- * @param summary The summary object containing bullets of key events.
- * @returns A base64 encoded string of the generated image.
- */
-export async function generateChapterImage(summary: Summary): Promise<string> {
-    const ai = getAIInstance();
-    const sceneDescription = summary.bullets.join(' ');
-    const prompt = `
-        A stylized, thematic digital painting capturing the essence of a book scene.
-        Key elements: "${sceneDescription}".
-        Style: Cinematic digital painting with dramatic lighting, focusing on mood and symbolism.
-        The final image must be suitable for a general audience, representing the theme artistically.
-    `;
-
-    try {
-        const response = await ai.models.generateImages({
-            model: 'imagen-4.0-generate-001',
-            prompt: prompt,
-            config: {
-              numberOfImages: 1,
-              outputMimeType: 'image/jpeg',
-              aspectRatio: '16:9',
-            },
-        });
-
-        if (response.generatedImages?.[0]?.image?.imageBytes) {
-            return response.generatedImages[0].image.imageBytes;
-        }
-
-        let feedbackMessage = "No specific reason provided by the API.";
-
-        if (response.promptFeedback) {
-            if (response.promptFeedback.blockReason) {
-                feedbackMessage = `Request was blocked. Reason: ${response.promptFeedback.blockReason}.`;
-            } else {
-                const highSeverityRating = response.promptFeedback.safetyRatings?.find(
-                    r => r.severity.startsWith('HIGH')
-                );
-                if (highSeverityRating) {
-                    feedbackMessage = `Request was blocked by a safety filter for content related to '${highSeverityRating.category}'.`;
-                }
-            }
-        }
-
-        throw new Error(`The AI model did not return an image. ${feedbackMessage}`);
-
-    } catch (error) {
-        console.error("Error generating image:", error);
-        const message = error instanceof Error ? error.message : "An unknown API error occurred.";
-        throw new Error(`Could not generate image: ${message}`);
-    }
-}
-
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
 /**
- * Chat with Gemini 2.5 Flash using chapter context
+ * Chat about the book using chapter context
  * @param messages The conversation history
  * @param systemContext The context to provide to the AI (chapter content or summaries)
  * @param isFirstMessage Whether this is the first message in the conversation
@@ -133,15 +80,15 @@ export async function chatWithGeminiStream(
   if (isFirstMessage && systemContext) {
     const spoilerWarning = allowSpoilers
       ? ''
-      : `\n\n🚫 CRITICAL SPOILER PROTECTION:\n- The reader is currently on Chapter ${currentChapter}\n- NEVER reveal events, plot points, or character fates from chapters AFTER Chapter ${currentChapter}\n- If asked about future events, politely say you can only discuss up to their current chapter\n- DO NOT hint at or foreshadow future events\n- Stay strictly within the boundaries of what they've read so far`;
+      : `\n\nSpoiler rules:\n- The reader is currently on Chapter ${currentChapter}\n- Do not reveal events, plot points, or character fates from chapters after Chapter ${currentChapter}\n- If asked about later events, say you can only discuss up to their current chapter\n- Avoid hinting at or foreshadowing what comes later\n- Stay within what they have read so far`;
 
     contents.push(`Context from the book:\n---\n${systemContext}\n---\n\nYou are a friendly, conversational assistant helping readers discuss this book.
 
 Key instructions:
-- Keep responses BRIEF (2-4 sentences max for simple questions)
+- Keep responses brief (2-4 sentences for simple questions)
 - Be conversational, not analytical or academic
-- Use the reader's language level - match their tone
-- Only elaborate if specifically asked for details
+- Match the reader's tone and language level
+- Only elaborate if asked for details
 - Use markdown formatting (bold, italics, lists) when helpful
 - Focus on what the reader asked, don't over-explain
 - Remember the context above for the rest of our conversation${spoilerWarning}
@@ -150,7 +97,7 @@ Answer naturally as if chatting with a friend about a book you both read.`);
   } else if (!isFirstMessage) {
     const spoilerReminder = allowSpoilers
       ? ''
-      : ` Remember: NO SPOILERS beyond Chapter ${currentChapter}!`;
+      : ` Remember: no spoilers beyond Chapter ${currentChapter}.`;
 
     // Just a reminder for subsequent messages
     contents.push(`You are discussing a book with the reader. Keep responses brief and conversational (2-4 sentences for simple questions).${spoilerReminder}`);
@@ -166,7 +113,7 @@ Answer naturally as if chatting with a friend about a book you both read.`);
 
   try {
     const response = await ai.models.generateContentStream({
-      model: 'gemini-2.5-flash',
+      model: MODEL,
       contents: fullPrompt,
     });
     return response;
